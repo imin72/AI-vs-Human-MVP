@@ -1,6 +1,6 @@
 import { Difficulty, Language, QuizQuestion } from '../types';
 
-const DB_NAME = 'CognitoDB';
+const DB_NAME = 'AiVsHumanDB';
 const STORE_NAME = 'quiz_cache';
 const DB_VERSION = 1;
 

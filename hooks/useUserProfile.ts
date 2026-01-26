@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { UserProfile } from '../types';
 import { audioHaptic } from '../services/audioHapticService';
 
-const PROFILE_KEY = 'cognito_user_profile_v1';
+const PROFILE_KEY = 'ai_vs_human_profile_v1';
 
 export const useUserProfile = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>({ 

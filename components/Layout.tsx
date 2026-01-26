@@ -40,12 +40,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, onHome, onTouchStart, 
         >
             <div className="relative flex items-center justify-center gap-3 md:gap-8 scale-75 md:scale-90 origin-top">
               
-              {/* HUMAN */}
+              {/* AI (Left) */}
               <div className="group relative">
-                <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-400 drop-shadow-lg tracking-tighter transition-transform group-hover:-translate-y-1 duration-500">
-                  HUMAN
+                <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-blue-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] tracking-widest font-mono transition-transform group-hover:-translate-y-1 duration-500">
+                  AI
                 </h1>
-                <div className="absolute -bottom-2 w-full h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-80 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
+                <div className="absolute -top-3 -right-3 w-2 h-2 md:w-3 md:h-3 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
+                <div className="absolute -bottom-2 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-80 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
               </div>
 
               {/* VS Badge */}
@@ -56,13 +57,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, onHome, onTouchStart, 
                 </div>
               </div>
 
-              {/* AI */}
+              {/* HUMAN (Right) */}
               <div className="group relative">
-                <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-blue-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] tracking-widest font-mono transition-transform group-hover:-translate-y-1 duration-500">
-                  AI
+                <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-400 drop-shadow-lg tracking-tighter transition-transform group-hover:-translate-y-1 duration-500">
+                  HUMAN
                 </h1>
-                <div className="absolute -top-3 -right-3 w-2 h-2 md:w-3 md:h-3 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
-                <div className="absolute -bottom-2 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-80 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
+                <div className="absolute -bottom-2 w-full h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent opacity-80 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
               </div>
 
             </div>

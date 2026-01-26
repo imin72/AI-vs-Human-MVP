@@ -1,5 +1,5 @@
 /**
- * 🏭 COGNITO FACTORY: MASTER SEEDER SCRIPT (ROBUST & RATE-LIMITED)
+ * 🏭 AI vs HUMAN FACTORY: MASTER SEEDER SCRIPT (ROBUST & RATE-LIMITED)
  * 
  * Usage: node scripts/seed.js
  * Stop: Press Ctrl + C to exit
@@ -199,7 +199,7 @@ function saveQuestionsToFile(filePath, key, questions) {
 }
 
 async function runSeeder() {
-  console.log(`\n🏭 COGNITO PROTOCOL: MULTI-LINGUAL DATA FACTORY`);
+  console.log(`\n🏭 AI vs HUMAN PROTOCOL: MULTI-LINGUAL DATA FACTORY`);
   console.log(`🎯 Target: ${TARGET_TOTAL} questions per topic`);
   console.log(`🌍 Languages: [${TARGET_LANGS.join(', ')}]`);
   console.log(`⏱️  Delay: ${DELAY_MS}ms per request to avoid rate limits.`);

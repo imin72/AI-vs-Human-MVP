@@ -146,8 +146,8 @@ export const StageResults: React.FC<StageResultsProps> = ({
   const weaknessLabel = weakestTopicId ? (categoriesT[weakestTopicId] || weakestTopicId) : "N/A";
 
   // --- Share Functions ---
-  const shareText = `Cognito Protocol 🧬\nScore: ${currentScore}/100 [${gradeInfo.label}]\n${isFinalSummary ? 'Aggregate Analysis' : `Topic: ${data.title}`}\n\nProve your humanity:`;
-  const hashtags = "HumanVsAI,Cognito";
+  const shareText = `AI vs Human 🧬\nScore: ${currentScore}/100 [${gradeInfo.label}]\n${isFinalSummary ? 'Aggregate Analysis' : `Topic: ${data.title}`}\n\nProve your humanity:`;
+  const hashtags = "AIvsHuman,KnowledgeBattle";
   const shareUrl = window.location.href;
 
   // Generic function to generate blob and try native sharing
@@ -164,12 +164,12 @@ export const StageResults: React.FC<StageResultsProps> = ({
           .then(dataUrl => fetch(dataUrl))
           .then(res => res.blob());
 
-        const file = new File([blob], `cognito-result-${Date.now()}.png`, { type: 'image/png' });
+        const file = new File([blob], `ai-vs-human-result-${Date.now()}.png`, { type: 'image/png' });
         
         // Try Web Share API Level 2 (File sharing)
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: 'Cognito Analysis',
+            title: 'AI vs Human Analysis',
             text: shareText,
             files: [file],
             url: shareUrl
@@ -223,7 +223,7 @@ export const StageResults: React.FC<StageResultsProps> = ({
       try {
         const dataUrl = await toPng(targetRef.current, { cacheBust: true, backgroundColor: '#020617' });
         const link = document.createElement('a');
-        link.download = `cognito-result-${currentPage === 0 ? 'summary' : currentPage === 1 ? 'details' : 'trends'}-${Date.now()}.png`;
+        link.download = `ai-vs-human-result-${currentPage === 0 ? 'summary' : currentPage === 1 ? 'details' : 'trends'}-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
       } catch (err) {
@@ -533,7 +533,7 @@ export const StageResults: React.FC<StageResultsProps> = ({
         </div>
       </div>
 
-      {/* SHARE MENU POPUP - (Existing code for share menu) */}
+      {/* SHARE MENU POPUP */}
       {showShareMenu && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 animate-fade-in bg-slate-950/80 backdrop-blur-sm">
            <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">

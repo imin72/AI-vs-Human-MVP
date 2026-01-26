@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'cognito-v2'; // Version bump
+const CACHE_NAME = 'ai-vs-human-v1'; // Version bump
 
 // Install event: Skip waiting to activate the new SW immediately
 self.addEventListener('install', (event) => {

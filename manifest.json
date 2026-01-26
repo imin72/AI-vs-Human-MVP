@@ -1,7 +1,6 @@
-
 {
-  "name": "Human vs AI: Knowledge Battle",
-  "short_name": "Human vs AI",
+  "name": "AI vs Human",
+  "short_name": "AI vs Human",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#020617",

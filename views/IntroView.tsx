@@ -18,7 +18,7 @@ interface IntroViewProps {
   onDebugSeed?: () => void;
 }
 
-const PROFILE_KEY = 'cognito_user_profile_v1';
+const PROFILE_KEY = 'ai_vs_human_profile_v1';
 
 const LANGUAGES: { id: Language; flag: string }[] = [
   { id: 'en', flag: '🇺🇸' },

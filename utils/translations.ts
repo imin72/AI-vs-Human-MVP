@@ -168,7 +168,7 @@ const ENGLISH_BASE: TranslationData = {
   intro: {
     human_label: "HUMAN",
     ai_label: "AI",
-    title: "Challenge the AI!",
+    title: "AI vs Human",
     desc: "Select a field of expertise and prove that human intuition still reigns supreme.",
     btn_start: "Start Test",
     btn_continue: "Continue with Saved Profile",
@@ -320,7 +320,7 @@ const KO_TRANSLATIONS: TranslationData = {
   intro: { 
     human_label: "인간", 
     ai_label: "인공지능", 
-    title: "AI에 도전하세요!",
+    title: "AI vs Human",
     desc: "전문 분야를 선택하고 인간의 직관이 여전히 우위임을 증명하십시오.", 
     btn_start: "테스트 시작",
     btn_continue: "저장된 프로필로 계속하기",
@@ -438,7 +438,7 @@ const JA_TRANSLATIONS: TranslationData = {
   intro: { 
     human_label: "人間", 
     ai_label: "AI", 
-    title: "AIに挑戦せよ！",
+    title: "AI vs Human",
     desc: "専門分野を選択し、人間の直感がいまだに優位であることを証明してください。", 
     btn_start: "テスト開始",
     btn_continue: "保存されたプロフィールで続行",
@@ -553,6 +553,15 @@ const ES_TRANSLATIONS: TranslationData = {
     confirm_exit_app: "¿Quieres salir de la aplicación?",
     close: "Cerrar" 
   },
+  intro: { 
+    human_label: "Humano", 
+    ai_label: "IA", 
+    title: "AI vs Human",
+    desc: "Selecciona un campo de experiencia y demuestra que la intuición humana sigue reinando.", 
+    btn_start: "Comenzar Prueba",
+    btn_continue: "Continuar con Perfil Guardado",
+    btn_reset: "Reiniciar Perfil"
+  },
   topics: {
     ...ENGLISH_BASE.topics,
     desc_select: "Selecciona los dominios que deseas desafiar.",
@@ -602,6 +611,15 @@ const FR_TRANSLATIONS: TranslationData = {
     confirm_home: "Retourner à l'accueil ? La progression actuelle sera perdue.",
     confirm_exit_app: "Voulez-vous quitter l'application ?",
     close: "Fermer" 
+  },
+  intro: { 
+    human_label: "Humain", 
+    ai_label: "IA", 
+    title: "AI vs Human",
+    desc: "Sélectionnez un domaine d'expertise et prouvez que l'intuition humaine règne toujours en maître.", 
+    btn_start: "Commencer le test",
+    btn_continue: "Continuer avec le profil enregistré",
+    btn_reset: "Réinitialiser le profil"
   },
   topics: {
     ...ENGLISH_BASE.topics,
@@ -656,7 +674,7 @@ const ZH_TRANSLATIONS: TranslationData = {
   intro: { 
     human_label: "人类", 
     ai_label: "人工智能", 
-    title: "挑战人工智能！",
+    title: "AI vs Human",
     desc: "选择专业领域，证明人类直觉仍然至高无上。", 
     btn_start: "开始测试",
     btn_continue: "继续使用已保存的档案",
