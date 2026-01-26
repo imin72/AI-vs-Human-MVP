@@ -245,17 +245,20 @@ export const useGameViewModel = () => {
 
     switch (nav.stage) {
       case AppStage.TOPIC_SELECTION:
-        // Handle internal subtopic state without leaving view
+        // Case 1: Subtopic -> Category
+        // We handle this internally. We want to INTERCEPT the browser back (restore history).
         if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
             topicMgr.actions.backToCategories();
-            return true;
+            return true; 
         }
+        // Case 2: Category -> Intro
+        // We want to ACCEPT the browser back (let history pop to root).
         nav.setStage(AppStage.INTRO); 
-        return true;
+        return false;
 
       case AppStage.PROFILE:
         nav.setStage(AppStage.INTRO);
-        return true;
+        return false; // Accept pop to root
 
       case AppStage.INTRO:
         // Allow default browser behavior (exit app/tab)
@@ -270,9 +273,9 @@ export const useGameViewModel = () => {
            setEvaluation(null);
            setSessionResults([]);
            nav.setStage(AppStage.INTRO);
-           return true;
+           return false; // Accept pop to root/previous
         }
-        // Cancelled
+        // Cancelled: Intercept (Restore history state to stay on Quiz)
         return true;
 
       case AppStage.RESULTS:
@@ -284,13 +287,13 @@ export const useGameViewModel = () => {
           setEvaluation(null);
           setSessionResults([]);
           nav.setStage(AppStage.INTRO);
-          return true;
+          return false; // Accept pop
         }
-        return true;
+        return true; // Intercept
 
       default:
         nav.setStage(AppStage.INTRO);
-        return true;
+        return false;
     }
   }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, nav, topicMgr.actions, quiz.actions]);
 
@@ -300,8 +303,9 @@ export const useGameViewModel = () => {
       nav.isNavigatingBackRef.current = true;
       const handled = performBackNavigation();
       
-      // If handled internally (e.g., cancelled exit or state change),
-      // we must push state back to restore forward history because browser popped it.
+      // If handled internally (Intercepted), we must push state back 
+      // to restore forward history because browser popped it.
+      // If NOT handled (Accepted), we assume the browser pop was correct.
       if (handled) {
          window.history.pushState({ stage: nav.stage }, '');
       }
@@ -418,7 +422,6 @@ export const useGameViewModel = () => {
     confirmAnswer,
 
     startDebugQuiz: async () => { 
-       /* Re-implementing simplified debug for consistency */
        if (isPending) return;
        try { audioHaptic.playClick(); } catch {}
        setIsPending(true);
