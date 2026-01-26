@@ -4,7 +4,7 @@ import { getStaticQuestions, resolveTopicInfo } from "../data/staticDatabase";
 
 // Import new separated services
 import { generateCacheKey, loadQuizCache, updateCacheEntry, saveQuizCache } from "./cacheManager";
-import { generateContentJSON, getAiClient, cleanJson } from "./geminiClient";
+import { generateContentJSON } from "./geminiClient";
 
 // --- Safe Environment Helpers ---
 const isDev = () => {
