@@ -6,6 +6,9 @@ import { getStaticQuestions, resolveTopicInfo } from "../data/staticDatabase";
 import { generateCacheKey, loadQuizCache, updateCacheEntry, saveQuizCache } from "./cacheManager";
 import { generateContentJSON } from "./geminiClient";
 
+// Import AI Persona DB
+import { getAiComments, getRandomComment } from "../data/aiObserverDB";
+
 // --- Safe Environment Helpers ---
 const isDev = () => {
   if (typeof window !== 'undefined') {
@@ -356,94 +359,60 @@ export interface BatchEvaluationInput {
 }
 
 /**
- * Main Orchestrator: Evaluate Answers
+ * Main Orchestrator: Evaluate Answers (OFFLINE MODE)
+ * Replaces expensive LLM calls with local heuristic analysis using Static Persona DB.
  */
 export const evaluateBatchAnswers = async (
   batches: BatchEvaluationInput[],
   userProfile: UserProfile,
   lang: Language
 ): Promise<EvaluationResult[]> => {
-  try {
-    const summaries = batches.map(b => 
-      `## Topic: ${b.topic} (Score: ${b.score}/100)
-       Questions:
-       ${b.performance.map(p => `- Q${p.questionId}: "${p.questionText}" Selected: "${p.selectedOption}" Correct: "${p.correctAnswer}" Result: ${p.isCorrect}`).join('\n')}`
-    ).join('\n\n');
+  // Simulate network delay for realism (immersive "calculating" feel)
+  await new Promise(resolve => setTimeout(resolve, 800));
 
-    const prompt = `
-      Analyze user performance across topics.
-      User: Age ${userProfile.ageGroup}, Nationality ${userProfile.nationality}.
-      Language: ${lang} (Output in this language).
-      Input: ${summaries}
-      Return JSON with 'results' array matching input order.
-      Include 'details' array for each question with 'aiComment' explaining the result.
-    `;
+  const commentsDB = getAiComments(lang);
 
-    // Schema definition allows for safer parsing, though we rely on standard JSON structure
-    const parsed = await generateContentJSON(prompt, {
-      type: Type.OBJECT,
-      properties: {
-        results: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              humanPercentile: { type: Type.INTEGER },
-              demographicPercentile: { type: Type.INTEGER },
-              demographicComment: { type: Type.STRING },
-              aiComparison: { type: Type.STRING },
-              title: { type: Type.STRING },
-              details: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    questionId: { type: Type.INTEGER },
-                    isCorrect: { type: Type.BOOLEAN },
-                    aiComment: { type: Type.STRING },
-                    correctFact: { type: Type.STRING }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+  return batches.map(batch => {
+    // 1. Determine Score Tier
+    let mainComment = "";
+    if (batch.score === 100) mainComment = getRandomComment(commentsDB.perfect);
+    else if (batch.score >= 80) mainComment = getRandomComment(commentsDB.high);
+    else if (batch.score >= 40) mainComment = getRandomComment(commentsDB.mid);
+    else mainComment = getRandomComment(commentsDB.low);
+
+    // 2. Determine Percentiles (Heuristic based on Elo/Score)
+    // In a real app, this would query a global stat DB. Here we simulate it.
+    const humanPercentile = Math.min(99, Math.round(batch.score * 0.9 + Math.random() * 10));
+    const demographicPercentile = Math.min(99, Math.round(batch.score * 0.85 + Math.random() * 15));
+    
+    // 3. Process Details (Question Level Analysis)
+    const details = batch.performance.map(p => {
+       const shortComment = p.isCorrect 
+          ? getRandomComment(commentsDB.correct) 
+          : getRandomComment(commentsDB.wrong);
+       
+       // Use stored context as "AI Fact" if available, otherwise generic
+       const correctFact = p.context || p.correctAnswer; 
+
+       return {
+         questionId: p.questionId,
+         isCorrect: p.isCorrect,
+         questionText: p.questionText,
+         selectedOption: p.selectedOption,
+         correctAnswer: p.correctAnswer,
+         aiComment: shortComment, 
+         correctFact: correctFact
+       };
     });
 
-    return parsed.results.map((res: any, index: number) => {
-      const originalBatch = batches[index];
-      return {
-        ...res,
-        totalScore: originalBatch.score,
-        details: originalBatch.performance.map((p) => {
-          const aiDetail = res.details?.find((d: any) => d.questionId === p.questionId);
-          return {
-            questionId: p.questionId,
-            isCorrect: p.isCorrect,
-            questionText: p.questionText,
-            selectedOption: p.selectedOption,
-            correctAnswer: p.correctAnswer,
-            aiComment: aiDetail?.aiComment || "Analysis unavailable",
-            correctFact: aiDetail?.correctFact || "N/A"
-          };
-        })
-      };
-    });
-
-  } catch (error) {
-    console.error("Evaluation Failed", error);
-    // Fallback Result
-    return batches.map(b => ({
-      totalScore: b.score,
-      humanPercentile: b.score,
-      demographicPercentile: b.score,
-      demographicComment: "Analysis failed.",
-      aiComparison: "AI Unavailable.",
-      title: b.topic,
-      details: b.performance.map(p => ({
-        ...p, aiComment: "N/A", correctFact: "N/A"
-      })) as any
-    }));
-  }
+    return {
+      title: batch.topic,
+      totalScore: batch.score,
+      humanPercentile,
+      demographicPercentile,
+      aiComparison: mainComment,
+      demographicComment: getRandomComment(commentsDB.demographic),
+      details
+    };
+  });
 };

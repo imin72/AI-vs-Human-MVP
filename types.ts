@@ -72,6 +72,7 @@ export interface UserAnswer {
   selectedOption: string;
   correctAnswer: string;
   isCorrect: boolean;
+  context?: string; // Added for offline analysis capability
 }
 
 export interface EvaluationItem {

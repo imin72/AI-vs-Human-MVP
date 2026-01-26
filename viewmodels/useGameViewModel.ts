@@ -282,7 +282,8 @@ export const useGameViewModel = () => {
       questionText: question.question, 
       selectedOption: quiz.state.selectedOption, 
       correctAnswer: question.correctAnswer, 
-      isCorrect 
+      isCorrect,
+      context: question.context // Pass context for offline analysis
     };
     
     const updatedAnswers = [...quiz.state.userAnswers, answer];
