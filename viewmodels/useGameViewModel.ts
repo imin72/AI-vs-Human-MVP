@@ -9,6 +9,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useTopicManager } from '../hooks/useTopicManager';
 import { useQuizEngine, AccumulatedBatchData } from '../hooks/useQuizEngine';
 import { useAppNavigation } from '../hooks/useAppNavigation';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
 
 const DEBUG_QUIZ: QuizQuestion[] = [
   { 
@@ -235,16 +236,101 @@ export const useGameViewModel = () => {
     }
   }, [quiz, nav, profile.userProfile, language]);
 
+  // --- Browser History Integration ---
+  const performBackNavigation = useCallback((): boolean => {
+    if (isPending || quiz.state.isSubmitting) return false;
+    try { audioHaptic.playClick('soft'); } catch {}
+
+    const confirmHomeMsg = t.common.confirm_home;
+
+    switch (nav.stage) {
+      case AppStage.TOPIC_SELECTION:
+        // Handle internal subtopic state without leaving view
+        if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
+            topicMgr.actions.backToCategories();
+            return true;
+        }
+        nav.setStage(AppStage.INTRO); 
+        return true;
+
+      case AppStage.PROFILE:
+        nav.setStage(AppStage.INTRO);
+        return true;
+
+      case AppStage.INTRO:
+        // Allow default browser behavior (exit app/tab)
+        return false;
+
+      case AppStage.QUIZ:
+        if (window.confirm(confirmHomeMsg)) {
+           // Cleanup and go home
+           setIsPending(false);
+           quiz.actions.resetQuizState();
+           topicMgr.actions.resetSelection();
+           setEvaluation(null);
+           setSessionResults([]);
+           nav.setStage(AppStage.INTRO);
+           return true;
+        }
+        // Cancelled
+        return true;
+
+      case AppStage.RESULTS:
+      case AppStage.ERROR:
+        if (window.confirm(confirmHomeMsg)) {
+          setIsPending(false);
+          quiz.actions.resetQuizState();
+          topicMgr.actions.resetSelection();
+          setEvaluation(null);
+          setSessionResults([]);
+          nav.setStage(AppStage.INTRO);
+          return true;
+        }
+        return true;
+
+      default:
+        nav.setStage(AppStage.INTRO);
+        return true;
+    }
+  }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, nav, topicMgr.actions, quiz.actions]);
+
+  useEffect(() => {
+    const handlePopState = (_: PopStateEvent) => {
+      // Browser Back Button was pressed
+      nav.isNavigatingBackRef.current = true;
+      const handled = performBackNavigation();
+      
+      // If handled internally (e.g., cancelled exit or state change),
+      // we must push state back to restore forward history because browser popped it.
+      if (handled) {
+         window.history.pushState({ stage: nav.stage }, '');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [performBackNavigation, nav.stage]);
+
+  // --- Manual Back Action (Button or Swipe) ---
+  const goBack = useCallback(() => {
+     if (isPending || quiz.state.isSubmitting) return;
+     try { audioHaptic.playClick('soft'); } catch {}
+
+     // 1. Internal Logic first (Subtopic -> Category)
+     if (nav.stage === AppStage.TOPIC_SELECTION && topicMgr.state.selectionPhase === 'SUBTOPIC') {
+        topicMgr.actions.backToCategories();
+        return;
+     }
+
+     // 2. Default: Trigger Browser Back which fires popstate
+     window.history.back();
+  }, [isPending, quiz.state.isSubmitting, nav.stage, topicMgr.state.selectionPhase, topicMgr.actions]);
 
   // --- Actions Wrapper for View ---
   const actions = useMemo(() => ({
-    // Language
     setLanguage: (lang: Language) => { 
       try { audioHaptic.playClick('soft'); } catch {}
       setLanguage(lang); 
     },
-    
-    // Intro & Profile
     startIntro: () => {
       try { audioHaptic.playClick('hard'); } catch {}
       if (profile.userProfile.gender && profile.userProfile.nationality) {
@@ -266,27 +352,15 @@ export const useGameViewModel = () => {
       profile.actions.saveProfile();
       nav.setStage(AppStage.TOPIC_SELECTION);
     },
-
-    // Topic Selection
     selectCategory: topicMgr.actions.selectCategory,
     proceedToSubTopics: topicMgr.actions.proceedToSubTopics,
     selectSubTopic: topicMgr.actions.selectSubTopic,
     setDifficulty: topicMgr.actions.setDifficulty,
     shuffleTopics: topicMgr.actions.shuffleTopics,
-    shuffleSubTopics: () => {}, // Placeholder
-    setCustomTopic: (_topic: string) => {}, // Placeholder
+    shuffleSubTopics: () => {}, 
+    setCustomTopic: (_topic: string) => {},
     
-    // Navigation
-    goBack: () => {
-      if (isPending || quiz.state.isSubmitting) return;
-      try { audioHaptic.playClick(); } catch {}
-
-      if (nav.stage === AppStage.TOPIC_SELECTION && topicMgr.state.selectionPhase === 'SUBTOPIC') {
-        topicMgr.actions.backToCategories();
-        return;
-      }
-      window.history.back();
-    },
+    goBack,
     
     goHome: () => {
       nav.goHome(t.common.confirm_home, () => {
@@ -307,11 +381,9 @@ export const useGameViewModel = () => {
       nav.setStage(AppStage.TOPIC_SELECTION);
     },
 
-    // Quiz Execution
     startQuiz: async () => {
       if (isPending) return;
       if (topicMgr.state.selectedSubTopics.length === 0) return;
-      
       try { audioHaptic.playClick('hard'); } catch {}
       setIsPending(true);
       nav.setStage(AppStage.LOADING_QUIZ);
@@ -322,7 +394,6 @@ export const useGameViewModel = () => {
           language, 
           profile.userProfile
         );
-        
         if (quizSets.length > 0) {
           quiz.actions.initQuiz(quizSets);
           nav.setStage(AppStage.QUIZ);
@@ -346,134 +417,48 @@ export const useGameViewModel = () => {
     selectOption: quiz.actions.selectOption,
     confirmAnswer,
 
-    // Debug Actions
-    startDebugQuiz: async () => {
+    startDebugQuiz: async () => { 
+       /* Re-implementing simplified debug for consistency */
        if (isPending) return;
        try { audioHaptic.playClick(); } catch {}
        setIsPending(true);
        nav.setStage(AppStage.LOADING_QUIZ);
-       
        try {
          await new Promise(resolve => setTimeout(resolve, 800));
-         const debugTopics = ["Debug Alpha", "Debug Beta", "Debug Gamma", "Debug Delta"];
+         const debugTopics = ["Debug Alpha", "Debug Beta"];
          const debugSets: QuizSet[] = debugTopics.map((topic, index) => ({
            topic: topic,
            categoryId: "GENERAL",
-           questions: DEBUG_QUIZ.map(q => ({
-              ...q,
-              id: q.id + (index * 100), 
-              question: `[${topic}] ${q.question}`
-           }))
+           questions: DEBUG_QUIZ.map(q => ({ ...q, id: q.id + (index * 100) }))
          }));
-         
          quiz.actions.initQuiz(debugSets);
          nav.setStage(AppStage.QUIZ);
-       } catch (e: any) {
-         setErrorMsg("Debug Init Failed: " + e.message);
+       } catch (e) {
          nav.setStage(AppStage.ERROR);
-       } finally {
-         setIsPending(false);
-       }
+       } finally { setIsPending(false); }
     },
-    triggerSeeding: async () => {
-       if (isPending) return;
-       try { audioHaptic.playClick('hard'); } catch {}
-       setIsPending(true);
-       try {
-         await seedLocalDatabase((msg) => console.log(msg));
-         alert("Seeding Complete!");
-       } catch (e: any) {
-         alert("Seeding Failed: " + e.message);
-       } finally {
-         setIsPending(false);
-       }
+    triggerSeeding: async () => { 
+       try { await seedLocalDatabase(console.log); alert("Seeding OK"); } catch(e) { alert("Fail"); }
     },
     previewResults: () => {
-      try { audioHaptic.playClick(); } catch {}
       const mockResult: EvaluationResult = {
         id: "SCIENCE",
-        totalScore: 88,
-        humanPercentile: 92,
-        aiComparison: "Debug Mode.",
-        demographicPercentile: 95,
-        demographicComment: "Outlier.",
-        title: "Quantum Physics",
-        details: []
+        totalScore: 88, humanPercentile: 92, aiComparison: "Debug Mode.", demographicPercentile: 95, demographicComment: "Outlier.", title: "Quantum Physics", details: []
       };
-      setEvaluation(mockResult);
-      setSessionResults([mockResult]);
-      nav.setStage(AppStage.RESULTS);
+      setEvaluation(mockResult); setSessionResults([mockResult]); nav.setStage(AppStage.RESULTS);
     },
     previewLoading: () => {
-        try { audioHaptic.playClick(); } catch {}
         nav.setStage(AppStage.LOADING_QUIZ);
-        setTimeout(() => nav.setStage(AppStage.INTRO), 5000);
+        setTimeout(() => nav.setStage(AppStage.INTRO), 3000);
     },
-  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t]);
+  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t, goBack]);
 
-  // --- Browser History Integration ---
-  const performBackNavigation = useCallback((): boolean => {
-    if (isPending || quiz.state.isSubmitting) return false;
-    try { audioHaptic.playClick('soft'); } catch {}
-
-    const confirmHomeMsg = t.common.confirm_home;
-
-    switch (nav.stage) {
-      case AppStage.TOPIC_SELECTION:
-        if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
-            topicMgr.actions.backToCategories();
-            return true;
-        }
-        nav.setStage(AppStage.INTRO); 
-        return true;
-
-      case AppStage.PROFILE:
-        nav.setStage(AppStage.INTRO);
-        return true;
-
-      case AppStage.INTRO:
-        if (window.confirm(t.common.confirm_exit_app)) {
-           const len = window.history.length;
-           if (len > 1) window.history.go(-(len - 1));
-           else window.close();
-           return true;
-        }
-        return false;
-
-      case AppStage.QUIZ:
-        if (window.confirm(confirmHomeMsg)) {
-          actions.goHome(); // Use centralized cleanup
-          return true;
-        }
-        return false;
-
-      case AppStage.RESULTS:
-      case AppStage.ERROR:
-        if (window.confirm(confirmHomeMsg)) {
-          actions.goHome();
-          return true;
-        }
-        return false;
-
-      default:
-        nav.setStage(AppStage.INTRO);
-        return true;
-    }
-  }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, actions, nav, topicMgr.actions]);
-
-  useEffect(() => {
-    const handlePopState = (_: PopStateEvent) => {
-      nav.isNavigatingBackRef.current = true;
-      const success = performBackNavigation();
-      
-      if (!success) {
-        window.history.pushState({ stage: nav.stage }, '');
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [performBackNavigation, nav.stage, nav.isNavigatingBackRef]);
-
+  // --- Initialize Swipe Gestures ---
+  const swipeHandlers = useSwipeGesture({
+    onSwipeRight: goBack,
+    edgeOnly: true, // Only swipe from edge to go back (Native-like)
+    threshold: 60
+  });
 
   // Return Facade
   return {
@@ -491,6 +476,7 @@ export const useGameViewModel = () => {
       resultState: { evaluation, sessionResults, errorMsg } 
     },
     actions,
+    swipeHandlers, // Expose swipe handlers
     t
   };
 };

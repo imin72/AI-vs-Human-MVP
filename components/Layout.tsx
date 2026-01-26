@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Language } from '../types';
 
@@ -7,14 +6,20 @@ interface LayoutProps {
   currentLanguage?: Language;
   onLanguageChange?: (lang: Language) => void;
   onHome?: () => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, onHome }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, onHome, onTouchStart, onTouchEnd }) => {
   return (
     /* 
       h-[100dvh]: Dynamic Viewport Height
     */
-    <div className="relative h-[100dvh] w-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500/30 overflow-hidden">
+    <div 
+      className="relative h-[100dvh] w-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500/30 overflow-hidden"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Background Layer */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div 

@@ -1,4 +1,3 @@
-
 import { Layout } from './components/Layout.tsx';
 import { StageResults } from './components/StageResults.tsx';
 import { AppStage } from './types.ts';
@@ -13,11 +12,17 @@ import { LoadingView } from './views/LoadingView.tsx';
 import { ErrorView } from './views/ErrorView.tsx';
 
 export default function App() {
-  const { state, actions, t } = useGameViewModel();
+  const { state, actions, swipeHandlers, t } = useGameViewModel();
   const { stage, language, userProfile, topicState, quizState, resultState } = state;
 
   return (
-    <Layout currentLanguage={language} onLanguageChange={actions.setLanguage} onHome={actions.goHome}>
+    <Layout 
+      currentLanguage={language} 
+      onLanguageChange={actions.setLanguage} 
+      onHome={actions.goHome}
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchEnd={swipeHandlers.onTouchEnd}
+    >
       {stage === AppStage.INTRO && (
         <IntroView 
           t={t.intro} 
@@ -66,7 +71,6 @@ export default function App() {
             selectSubTopic: actions.selectSubTopic,
             setDifficulty: actions.setDifficulty,
             startQuiz: actions.startQuiz,
-            // Debug actions removed from here
             editProfile: actions.editProfile,
             setLanguage: actions.setLanguage
           }}
