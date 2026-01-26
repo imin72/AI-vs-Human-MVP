@@ -1,14 +1,8 @@
 /**
- * 🏭 COGNITO FACTORY: MASTER SEEDER SCRIPT
+ * 🏭 COGNITO FACTORY: MASTER SEEDER SCRIPT (ROBUST & RATE-LIMITED)
  * 
  * Usage: node scripts/seed.js
- * 
- * Logic:
- * 1. Iterates through all defined Categories and Topics.
- * 2. Checks data/questions/*.ts files to see if questions already exist.
- * 3. If questions are missing (target count not met), calls Gemini API.
- * 4. Generates questions for ALL difficulties (EASY, MEDIUM, HARD).
- * 5. Appends the new questions directly to the .ts files.
+ * Stop: Press Ctrl + C to exit
  */
 
 import fs from 'fs';
@@ -18,18 +12,15 @@ import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
-dotenv.config({ path: '.env.local' }); // Also check .env.local
+dotenv.config({ path: '.env.local' });
 
-// --- Dynamic Import for Better Error Handling ---
+// --- Dynamic Import for Gemini SDK ---
 let GoogleGenAI;
 try {
   const genai = await import("@google/genai");
   GoogleGenAI = genai.GoogleGenAI;
 } catch (error) {
   console.error('\n\x1b[31m%s\x1b[0m', '❌ CRITICAL ERROR: Missing dependency "@google/genai"');
-  console.error('   The seeder script requires the Gemini SDK to function.');
-  console.error('   Please run the following command to install it:\n');
-  console.error('   \x1b[36mnpm install\x1b[0m\n');
   process.exit(1);
 }
 
@@ -40,21 +31,23 @@ const API_KEY = process.env.API_KEY || process.env.GEMINI_API_KEY || process.env
 
 if (!API_KEY || API_KEY.includes("PLACEHOLDER")) {
   console.error("❌ ERROR: Valid API_KEY is missing in .env or .env.local");
-  console.error("Please add: API_KEY=AIzaSy...");
   process.exit(1);
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 const MODEL_NAME = 'gemini-2.5-flash'; 
 
-// --- ⚙️ CONFIGURATION (조절 가능) ---
-const QUESTIONS_PER_BATCH = 5;  // 한 번 요청에 생성할 문제 수 (최대 5~10 권장)
-const TARGET_TOTAL = 5;         // 난이도별 목표 문제 수 (운영 시 10~20으로 늘리세요)
-const TARGET_LANG = "en";       // 마스터 데이터는 영어로 생성 (앱이 실시간 번역 가능)
+// --- ⚙️ CONFIGURATION ---
+const QUESTIONS_PER_BATCH = 5;
+const TARGET_TOTAL = 5; 
+// The first language is the MASTER. Others are translated from it.
+const TARGET_LANGS = ["en", "ko", "ja", "zh", "es", "fr"]; 
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
-// -------------------------------------
 
-// Complete Topic Map
+// ⚠️ IMPORTANT: Increased delay to avoid 429 Rate Limit (Free Tier: 15 RPM)
+const DELAY_MS = 10000; 
+// -------------------------
+
 const TOPIC_MAP = {
   "HISTORY": ["Ancient Egypt", "Roman Empire", "World War II", "Cold War", "Renaissance", "Industrial Revolution", "French Revolution", "American Civil War", "Feudal Japan", "The Vikings", "Aztec Empire", "Mongol Empire", "The Crusades", "Victorian Era", "Prehistoric Era", "Decolonization"],
   "SCIENCE": ["Quantum Physics", "Genetics", "Organic Chemistry", "Neuroscience", "Botany", "Astronomy", "Geology", "Thermodynamics", "Marine Biology", "Evolution", "Particle Physics", "Immunology", "Paleontology", "Meteorology", "Robotics", "Ecology"],
@@ -78,16 +71,43 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const getDifficultyInstruction = (difficulty) => {
   switch (difficulty) {
-    case "EASY":
-      return `Target: General public. Focus: Definitions, famous facts, 'What/Who'. Avoid obscurity.`;
-    case "MEDIUM":
-      return `Target: Enthusiasts. Focus: Context, 'How/Why', comparisons. Requires understanding.`;
-    case "HARD":
-      return `Target: Experts. Focus: Nuance, specific dates, technical details, exceptions. Very challenging.`;
+    case "EASY": return `Target: General public. Focus: Definitions, famous facts.`;
+    case "MEDIUM": return `Target: Enthusiasts. Focus: Context, 'How/Why'.`;
+    case "HARD": return `Target: Experts. Focus: Nuance, specific dates, technical details.`;
     default: return "";
   }
 };
 
+/**
+ * 🛡️ Sanitize Data to prevent TypeScript Errors
+ * Ensures 'options' is string[] and 'context' is string.
+ */
+function sanitizeQuestions(data) {
+  if (!Array.isArray(data)) return [];
+  return data.map((q, idx) => {
+    // Force ID to be a number
+    const id = Number(q.id) || Date.now() + idx;
+
+    // Force Options to be array of strings
+    let options = [];
+    if (Array.isArray(q.options)) {
+      options = q.options.map(opt => (typeof opt === 'object' ? JSON.stringify(opt) : String(opt)));
+    } else {
+      options = ["Error A", "Error B", "Error C", "Error D"];
+    }
+
+    // Force strings
+    const question = String(q.question || "Error Question");
+    const correctAnswer = String(q.correctAnswer || options[0]);
+    const context = q.context ? (typeof q.context === 'object' ? JSON.stringify(q.context) : String(q.context)) : "No context provided.";
+
+    return { id, question, options, correctAnswer, context };
+  });
+}
+
+/**
+ * GENERATE (Master Data)
+ */
 async function generateQuestions(topic, difficulty, count) {
   const diffInstruction = getDifficultyInstruction(difficulty);
   const prompt = `
@@ -95,8 +115,9 @@ async function generateQuestions(topic, difficulty, count) {
     DIFFICULTY: ${difficulty}. ${diffInstruction}
     Constraints:
     - STRICTLY OBJECTIVE FACTS ONLY.
-    - Language: English
-    - JSON Format: Array of objects { id, question, options (4 strings), correctAnswer, context }.
+    - Language: English (Master Data)
+    - JSON Format: Array of objects { id, question, options (4 simple strings), correctAnswer, context }.
+    - IMPORTANT: 'options' must be an array of STRINGS, not objects.
     - ID: Use a random integer.
   `;
 
@@ -106,97 +127,154 @@ async function generateQuestions(topic, difficulty, count) {
         contents: [{ parts: [{ text: prompt }] }],
         config: { responseMimeType: "application/json" }
     });
-    const text = response.text || "[]";
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
+    const raw = JSON.parse(response.text.replace(/```json|```/g, "").trim());
+    return sanitizeQuestions(raw);
   } catch (e) {
-    console.error(`      ⚠️ API Error: ${e.message}`);
+    console.error(`      ⚠️ Gen Error: ${e.message}`);
+    if (e.message.includes("429")) console.log("      ⏳ Rate limit hit. Sleeping extra...");
+    await sleep(20000); // Extra sleep on error
     return [];
   }
 }
 
+/**
+ * TRANSLATE (Mirroring)
+ */
+async function translateQuestions(questions, targetLang) {
+  const prompt = `
+    Translate the following JSON quiz data into language code "${targetLang}".
+    RULES:
+    1. Preserve all IDs exactly.
+    2. Translate 'question', 'options', 'correctAnswer', and 'context'.
+    3. Return valid JSON array matching the input structure.
+    4. Options must remain an array of strings.
+    INPUT DATA:
+    ${JSON.stringify(questions)}
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: { responseMimeType: "application/json" }
+    });
+    const raw = JSON.parse(response.text.replace(/```json|```/g, "").trim());
+    return sanitizeQuestions(raw);
+  } catch (e) {
+    console.error(`      ⚠️ Trans Error (${targetLang}): ${e.message}`);
+    await sleep(20000); // Extra sleep on error
+    return [];
+  }
+}
+
+/**
+ * FILE SYSTEM HELPER
+ */
+function getQuestionsFromFile(filePath, key) {
+  if (!fs.existsSync(filePath)) return null;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const regex = new RegExp(`"${key}":\\s*\\[([\\s\\S]*?)\\]`, 'm');
+  const match = content.match(regex);
+  if (match) {
+    try {
+      return JSON.parse(`[${match[1]}]`);
+    } catch(e) { return null; }
+  }
+  return null;
+}
+
+function saveQuestionsToFile(filePath, key, questions) {
+  let fileContent = fs.readFileSync(filePath, 'utf-8');
+  const jsonStr = JSON.stringify(questions, null, 2);
+
+  if (fileContent.includes(`"${key}"`)) {
+    console.log(`      ⚠️ Key ${key} already exists (skipping overwrite).`);
+    return;
+  }
+
+  const newEntry = `\n  "${key}": ${jsonStr},`;
+  const lastBrace = fileContent.lastIndexOf('};');
+  fileContent = fileContent.slice(0, lastBrace) + newEntry + "\n};";
+  fs.writeFileSync(filePath, fileContent);
+}
+
 async function runSeeder() {
-  console.log(`\n🏭 COGNITO PROTOCOL: DATA FACTORY INITIALIZED`);
-  console.log(`🎯 Target: ${TARGET_TOTAL} questions per [Topic/Difficulty]`);
-  console.log(`🔑 API Key detected.`);
+  console.log(`\n🏭 COGNITO PROTOCOL: MULTI-LINGUAL DATA FACTORY`);
+  console.log(`🎯 Target: ${TARGET_TOTAL} questions per topic`);
+  console.log(`🌍 Languages: [${TARGET_LANGS.join(', ')}]`);
+  console.log(`⏱️  Delay: ${DELAY_MS}ms per request to avoid rate limits.`);
+  console.log(`🛑 Press Ctrl + C to stop anytime.\n`);
 
   for (const [category, subtopics] of Object.entries(TOPIC_MAP)) {
     console.log(`\n📂 CATEGORY: ${category}`);
     
-    // 1. Prepare File
+    // Ensure File Exists
     const filename = `${category.toLowerCase()}.ts`;
     const filePath = path.resolve(__dirname, '../data/questions', filename);
     const dirPath = path.dirname(filePath);
-
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
-    
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, `import { QuizQuestion } from '../../types';\n\nexport const ${category}_DB: Record<string, QuizQuestion[]> = {\n};`);
-      console.log(`   + Created file: ${filename}`);
     }
 
-    // 2. Iterate Topics
     for (const topic of subtopics) {
-      process.stdout.write(`   👉 ${topic.padEnd(25)} `);
+      process.stdout.write(`   👉 ${topic.padEnd(20)} `);
 
       for (const difficulty of DIFFICULTIES) {
-        const key = `${topic}_${difficulty}_${TARGET_LANG}`;
-        let fileContent = fs.readFileSync(filePath, 'utf-8');
-
-        // Check current count in file using Regex
-        const regex = new RegExp(`"${key}":\\s*\\[([\\s\\S]*?)\\]`, 'm');
-        const match = fileContent.match(regex);
-        let currentCount = 0;
         
-        if (match) {
-          // Count occurences of "id" to guess number of questions
-          currentCount = (match[1].match(/"id":/g) || []).length;
-        }
-
-        if (currentCount >= TARGET_TOTAL) {
-          process.stdout.write(`[${difficulty[0]}:✔] `); // Skip
-          continue;
-        }
-
-        // Generate missing
-        const needed = TARGET_TOTAL - currentCount;
-        const batchSize = Math.min(needed, QUESTIONS_PER_BATCH);
+        // 1. Check/Generate MASTER Data (English)
+        const masterLang = TARGET_LANGS[0]; // 'en'
+        const masterKey = `${topic}_${difficulty}_${masterLang}`;
+        let masterData = getQuestionsFromFile(filePath, masterKey);
         
-        // Rate Limiting Pause (Free tier friendly)
-        await sleep(2000); 
-
-        const newQuestions = await generateQuestions(topic, difficulty, batchSize);
-        
-        if (newQuestions.length > 0) {
-           // Fix IDs to be unique
-           const cleanQuestions = newQuestions.map((q, idx) => ({
-             ...q,
-             id: Date.now() + Math.floor(Math.random() * 1000000) + idx
-           }));
-
-           // Append Logic
-           if (match) {
-              // Insert into existing array
-              const closingBracket = match.index + match[0].lastIndexOf(']');
-              const jsonStr = JSON.stringify(cleanQuestions, null, 2).slice(1, -1); // remove outer []
-              const insert = currentCount > 0 ? `,${jsonStr}` : jsonStr;
-              fileContent = fileContent.slice(0, closingBracket) + insert + fileContent.slice(closingBracket);
-           } else {
-              // Create new key
-              const newEntry = `\n  "${key}": ${JSON.stringify(cleanQuestions, null, 2)},`;
-              const lastBrace = fileContent.lastIndexOf('};');
-              fileContent = fileContent.slice(0, lastBrace) + newEntry + "\n};";
-           }
-           
-           fs.writeFileSync(filePath, fileContent);
-           process.stdout.write(`[${difficulty[0]}:+${cleanQuestions.length}] `);
+        if (!masterData || masterData.length < TARGET_TOTAL) {
+          const needed = TARGET_TOTAL - (masterData ? masterData.length : 0);
+          const newQs = await generateQuestions(topic, difficulty, needed);
+          
+          if (newQs.length > 0) {
+            saveQuestionsToFile(filePath, masterKey, newQs);
+            masterData = newQs;
+            process.stdout.write(`[EN:GEN] `);
+            await sleep(DELAY_MS); // Sleep after generation
+          } else {
+            process.stdout.write(`[EN:ERR] `);
+          }
         } else {
-           process.stdout.write(`[${difficulty[0]}:x] `);
+          process.stdout.write(`[EN:✔] `);
+        }
+
+        if (!masterData || masterData.length === 0) continue;
+
+        // 2. Mirror to Other Languages
+        for (let i = 1; i < TARGET_LANGS.length; i++) {
+          const lang = TARGET_LANGS[i];
+          const targetKey = `${topic}_${difficulty}_${lang}`;
+          const existingData = getQuestionsFromFile(filePath, targetKey);
+
+          if (!existingData || existingData.length < masterData.length) {
+             const translatedQs = await translateQuestions(masterData, lang);
+             if (translatedQs.length > 0) {
+                saveQuestionsToFile(filePath, targetKey, translatedQs);
+                process.stdout.write(`[${lang.toUpperCase()}:TR] `);
+                await sleep(DELAY_MS); // Sleep after translation
+             } else {
+                process.stdout.write(`[${lang.toUpperCase()}:ERR] `);
+             }
+          } else {
+             // process.stdout.write(`[${lang.toUpperCase()}:✔] `);
+          }
         }
       }
-      console.log(""); // New line
+      console.log(""); 
     }
   }
-  console.log("\n✨ FACTORY SHUTDOWN. ALL DATA SECURED.");
+  console.log("\n✨ FACTORY SHUTDOWN.");
 }
+
+// Handle Safe Exit
+process.on('SIGINT', () => {
+  console.log("\n\n🛑 Process interrupted by user. Exiting safely...");
+  process.exit(0);
+});
 
 runSeeder();
