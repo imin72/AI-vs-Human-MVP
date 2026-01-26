@@ -125,8 +125,8 @@ export const IntroView: React.FC<IntroViewProps> = ({
       </div>
       
       {/* Main Content */}
-      <div className="glass-panel p-8 rounded-3xl text-center w-full flex flex-col items-center justify-center flex-grow mb-8">
-        <div className="flex justify-center gap-6 mb-8">
+      <div className="glass-panel p-8 rounded-3xl text-center w-full flex flex-col items-center justify-center flex-grow mb-8 min-h-[550px]">
+        <div className="flex justify-center gap-6 mb-8 shrink-0">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400 mb-2 border border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
               <Brain size={32} />
@@ -142,23 +142,23 @@ export const IntroView: React.FC<IntroViewProps> = ({
           </div>
         </div>
         
-        <div className="space-y-6 mb-10 max-w-lg select-none">
+        <div className="space-y-6 mb-10 max-w-lg select-none w-full">
           <h2 
             onClick={handleSecretTap}
-            className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] tracking-tight leading-tight cursor-default active:scale-95 transition-transform duration-100"
+            className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] tracking-tight leading-tight cursor-default active:scale-95 transition-transform duration-100 min-h-[80px] flex items-center justify-center"
           >
             {t.title}
           </h2>
-          <p className="text-base md:text-lg text-slate-400 leading-relaxed font-medium">
+          <p className="text-base md:text-lg text-slate-400 leading-relaxed font-medium min-h-[80px] flex items-center justify-center">
             {t.desc}
           </p>
         </div>
 
-        <div className="w-full max-w-md space-y-4">
-          <Button onClick={onStart} fullWidth className="text-lg py-4 group shadow-cyan-500/20">
+        <div className="w-full max-w-md space-y-4 shrink-0">
+          <Button onClick={onStart} fullWidth className="text-lg h-16 group shadow-cyan-500/20">
             {hasProfile ? (
               <span className="flex items-center justify-center gap-2">
-                <UserCheck size={20} /> {t.btn_continue}
+                <UserCheck size={20} /> <span className="truncate">{t.btn_continue}</span>
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
@@ -169,7 +169,7 @@ export const IntroView: React.FC<IntroViewProps> = ({
           
           {hasProfile && (
              <button 
-               className="text-sm font-bold text-slate-600 hover:text-rose-400 transition-colors py-2" 
+               className="text-sm font-bold text-slate-600 hover:text-rose-400 transition-colors py-2 h-10 flex items-center justify-center w-full" 
                onClick={onResetProfile}
              >
                {t.btn_reset}
@@ -179,7 +179,7 @@ export const IntroView: React.FC<IntroViewProps> = ({
 
         {/* Debug Controls (Visible in Local/Preview OR via Secret Tap) */}
         {showDebug && (
-          <div className="mt-8 pt-4 border-t border-slate-800/50 w-full flex justify-center gap-2 animate-fade-in flex-wrap">
+          <div className="mt-8 pt-4 border-t border-slate-800/50 w-full flex justify-center gap-2 animate-fade-in flex-wrap shrink-0">
              {onDebugBypass && (
               <button onClick={onDebugBypass} className="text-[10px] text-slate-500 hover:text-rose-400 flex items-center gap-1 px-2 py-1 bg-slate-900 rounded border border-slate-800 hover:border-rose-500/50 transition-all">
                 <Bug size={10} /> BYPASS
