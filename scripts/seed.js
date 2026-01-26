@@ -5,9 +5,8 @@
  * Usage: node scripts/seed.js
  * 
  * Purpose:
- * Pre-generates high-quality questions for ALL defined topics using Gemini API.
- * This populates the `data/questions/*.ts` files, allowing the app to run 
- * mostly offline/static, drastically reducing runtime API costs and latency.
+ * Pre-generates high-quality questions for ALL defined topics and ALL difficulties.
+ * Implements "Cognitive Depth" prompting to ensure objective difficulty levels.
  */
 
 import { GoogleGenAI } from "@google/genai";
@@ -33,12 +32,12 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
 const MODEL_NAME = 'gemini-2.5-flash'; 
 
 // Configuration
-const QUESTIONS_PER_BATCH = 5; // Generate 5 at a time
-const TARGET_TOTAL = 10; // Target total questions per topic (Increase this to 20-50 for prod)
-const TARGET_DIFFICULTY = "HARD";
+const QUESTIONS_PER_BATCH = 3; // Reduced batch size to accommodate multi-difficulty loop
+const TARGET_TOTAL_PER_DIFF = 5; // Target questions per difficulty level
 const TARGET_LANG = "en"; // Master data is English
+const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
 
-// Complete Topic Map (Mirrors translations.ts)
+// Complete Topic Map
 const TOPIC_MAP = {
   "HISTORY": ["Ancient Egypt", "Roman Empire", "World War II", "Cold War", "Renaissance", "Industrial Revolution", "French Revolution", "American Civil War", "Feudal Japan", "The Vikings", "Aztec Empire", "Mongol Empire", "The Crusades", "Victorian Era", "Prehistoric Era", "Decolonization"],
   "SCIENCE": ["Quantum Physics", "Genetics", "Organic Chemistry", "Neuroscience", "Botany", "Astronomy", "Geology", "Thermodynamics", "Marine Biology", "Evolution", "Particle Physics", "Immunology", "Paleontology", "Meteorology", "Robotics", "Ecology"],
@@ -61,19 +60,51 @@ const TOPIC_MAP = {
 // Helper: Sleep
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function generateQuestions(topic, count, existingQuestions = []) {
+// Helper: Difficulty Prompts
+const getDifficultyInstruction = (difficulty) => {
+  switch (difficulty) {
+    case "EASY":
+      return `
+        Target Audience: General Public / Beginners.
+        Focus: Basic definitions, famous figures, key events, and widely known facts.
+        Style: Straightforward "Who/What/Where" questions.
+        Avoid: Obscure dates, complex analysis, or trick questions.
+      `;
+    case "MEDIUM":
+      return `
+        Target Audience: Enthusiasts / Students.
+        Focus: Cause and effect, context, comparisons, and "Why/How".
+        Style: Requires understanding the relationship between concepts, not just memorization.
+        Avoid: Surface-level trivia (too easy) or academic minutiae (too hard).
+      `;
+    case "HARD":
+      return `
+        Target Audience: Experts / Obsessives.
+        Focus: Nuance, exceptions to rules, misconceptions, specific technical details, or complex multi-step reasoning.
+        Style: "Which of the following is NOT...", chronological ordering, or specific data points.
+        Goal: To challenge someone who thinks they know everything about the topic.
+      `;
+    default:
+      return "";
+  }
+};
+
+async function generateQuestions(topic, difficulty, count, existingQuestions = []) {
   const existingContexts = existingQuestions.map(q => q.question.substring(0, 20));
+  const diffInstruction = getDifficultyInstruction(difficulty);
   
   const prompt = `
-    Generate ${count} challenging, high-quality multiple-choice questions about "${topic}".
+    Generate ${count} multiple-choice questions about "${topic}".
+    
+    DIFFICULTY LEVEL: ${difficulty}
+    ${diffInstruction}
     
     Constraints:
-    - **STRICT OBJECTIVITY**: Questions must be based on absolute facts, physical laws, historical dates, or verifiable data.
+    - **STRICT OBJECTIVITY**: Questions must be based on absolute facts.
     - **NO DUPLICATES**: Avoid asking about: ${JSON.stringify(existingContexts)}.
     - Language: English
-    - Difficulty: ${TARGET_DIFFICULTY}
     - Format: JSON Array of objects with keys: id (number), question (string), options (string array), correctAnswer (string), context (string).
-    - Context: A short, interesting fact explaining the answer (max 1 sentence).
+    - Context: A short, interesting fact explaining the answer.
     - ID: Use random unique integers.
   `;
 
@@ -91,9 +122,8 @@ async function generateQuestions(topic, count, existingQuestions = []) {
 }
 
 async function runSeeder() {
-  console.log("🏭 Starting Cognito Factory Seeder...");
-  console.log(`🎯 Target: ${TARGET_TOTAL} questions per topic`);
-
+  console.log("🏭 Starting Cognito Factory Seeder (Multi-Difficulty Mode)...");
+  
   for (const [category, subtopics] of Object.entries(TOPIC_MAP)) {
     console.log(`\n📂 Category: ${category}`);
     
@@ -106,79 +136,78 @@ async function runSeeder() {
       fs.writeFileSync(filePath, `import { QuizQuestion } from '../../types';\n\nexport const ${category}_DB: Record<string, QuizQuestion[]> = {\n};`);
     }
 
-    // 2. Read File Content
     let fileContent = fs.readFileSync(filePath, 'utf-8');
 
-    // 3. Process Subtopics
     for (const topic of subtopics) {
-      const key = `${topic}_${TARGET_DIFFICULTY}_${TARGET_LANG}`;
-      
-      // Extract existing data count via Regex (rough count)
-      const regex = new RegExp(`"${key}":\\s*\\[([\\s\\S]*?)\\]`, 'm');
-      const match = fileContent.match(regex);
-      
-      let currentCount = 0;
-      let existingData = [];
-      
-      if (match) {
-        try {
-           // Hacky parsing of the array content inside the TS file
-           // This assumes standard JSON-like formatting inside the TS file
-           const arrayContent = "[" + match[1] + "]";
-           // We can't easily parse TS object literals in JS, so we rely on heuristic count
-           // counting "id:" occurrences
-           currentCount = (match[1].match(/id:/g) || []).length;
-        } catch (e) { }
-      }
+      console.log(`   👉 Topic: ${topic}`);
 
-      if (currentCount >= TARGET_TOTAL) {
-        process.stdout.write('.'); // Skip indicator
-        continue;
-      }
-
-      const needed = TARGET_TOTAL - currentCount;
-      const batchSize = Math.min(needed, QUESTIONS_PER_BATCH);
-      
-      console.log(`\n   ⚡ ${topic}: Found ${currentCount}/${TARGET_TOTAL}. Generating ${batchSize}...`);
-
-      try {
-        const newQuestions = await generateQuestions(topic, batchSize, existingData);
+      // Loop through ALL difficulties for each topic
+      for (const difficulty of DIFFICULTIES) {
+        const key = `${topic}_${difficulty}_${TARGET_LANG}`;
         
-        if (!Array.isArray(newQuestions) || newQuestions.length === 0) continue;
-
-        // Clean IDs to ensure uniqueness based on timestamp
-        const finalQuestions = newQuestions.map((q, idx) => ({
-           ...q,
-           id: Date.now() + Math.floor(Math.random() * 10000) + idx
-        }));
-
-        // INSERTION LOGIC
+        // Check existing count for this specific difficulty key
+        const regex = new RegExp(`"${key}":\\s*\\[([\\s\\S]*?)\\]`, 'm');
+        const match = fileContent.match(regex);
+        
+        let currentCount = 0;
+        let existingData = [];
+        
         if (match) {
-            // Append to existing array
-            const closingBracketIndex = match.index + match[0].lastIndexOf(']');
-            // Remove the closing bracket, add comma, add new data, add closing bracket
-            const arrayContent = JSON.stringify(finalQuestions, null, 2).slice(1, -1); // remove [ and ]
-            
-            const insertStr = `,${arrayContent}`;
-            fileContent = fileContent.slice(0, closingBracketIndex) + insertStr + fileContent.slice(closingBracketIndex);
-        } else {
-            // Create new entry
-            const newEntry = `\n  "${key}": ${JSON.stringify(finalQuestions, null, 2)},`;
-            const lastBrace = fileContent.lastIndexOf('};');
-            fileContent = fileContent.slice(0, lastBrace) + newEntry + "\n};";
+          try {
+             currentCount = (match[1].match(/id:/g) || []).length;
+          } catch (e) { }
         }
 
-        // Save immediately
-        fs.writeFileSync(filePath, fileContent);
-        console.log(`      ✅ Saved ${finalQuestions.length} questions.`);
-        
-        // Rate Limit Pause
-        await sleep(2000);
+        if (currentCount >= TARGET_TOTAL_PER_DIFF) {
+          process.stdout.write(`      [${difficulty}: Full]`);
+          continue;
+        }
 
-      } catch (e) {
-        console.error(`      ❌ Error: ${e.message}`);
-        await sleep(5000); // Longer pause on error
+        const needed = TARGET_TOTAL_PER_DIFF - currentCount;
+        const batchSize = Math.min(needed, QUESTIONS_PER_BATCH);
+        
+        process.stdout.write(`      [${difficulty}: Gen ${batchSize}...]`);
+
+        try {
+          const newQuestions = await generateQuestions(topic, difficulty, batchSize, existingData);
+          
+          if (!Array.isArray(newQuestions) || newQuestions.length === 0) continue;
+
+          // Unique IDs
+          const finalQuestions = newQuestions.map((q, idx) => ({
+             ...q,
+             id: Date.now() + Math.floor(Math.random() * 100000) + idx
+          }));
+
+          // FILE INSERTION
+          // We need to re-read file content inside the loop in case previous iterations modified it
+          fileContent = fs.readFileSync(filePath, 'utf-8');
+          const freshMatch = fileContent.match(regex);
+
+          if (freshMatch) {
+              // Append to existing array
+              const closingBracketIndex = freshMatch.index + freshMatch[0].lastIndexOf(']');
+              const arrayContent = JSON.stringify(finalQuestions, null, 2).slice(1, -1); 
+              const insertStr = `,${arrayContent}`;
+              fileContent = fileContent.slice(0, closingBracketIndex) + insertStr + fileContent.slice(closingBracketIndex);
+          } else {
+              // Create new entry
+              const newEntry = `\n  "${key}": ${JSON.stringify(finalQuestions, null, 2)},`;
+              const lastBrace = fileContent.lastIndexOf('};');
+              fileContent = fileContent.slice(0, lastBrace) + newEntry + "\n};";
+          }
+
+          fs.writeFileSync(filePath, fileContent);
+          process.stdout.write(` ✅`);
+          
+          await sleep(1500); // Rate limit
+
+        } catch (e) {
+          console.error(`\n      ❌ Error: ${e.message}`);
+          await sleep(5000);
+        }
       }
+      console.log(""); // New line after topic
     }
   }
   console.log("\n\n✨ All topics processed.");
