@@ -347,13 +347,8 @@ export const useGameViewModel = () => {
     // --- EXIT APP LOGIC FOR INTRO SCREEN ---
     if (nav.stage === AppStage.INTRO) {
         if (window.confirm(t.common.confirm_exit_app)) {
-           // User wants to exit. Return false allows the 'popstate' event 
-           // to proceed naturally, taking the user back to the previous page/app.
            return false; 
         } else {
-           // User wants to stay. We must push state back to cancel the pop.
-           // Since we are inside the 'popstate' handler, the history has ALREADY popped.
-           // We push it back to restore the Intro view.
            window.history.pushState({ stage: AppStage.INTRO }, '');
            return true;
         }
@@ -411,12 +406,7 @@ export const useGameViewModel = () => {
       nav.isNavigatingBackRef.current = true;
       const handled = performBackNavigation();
       if (handled) {
-         // If we handled it internally (e.g. going back a step within the app),
-         // we need to make sure the history stack reflects where we are.
-         // However, most internal navs in the switch above simply setStage.
-         // The important part is returning 'true' prevents accidental exit if needed
-         // by manually pushing state back (like in Intro check).
-         // For general stages, we let NavigationContext's useEffect handle the state push/replace.
+         // handled internally
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -430,20 +420,17 @@ export const useGameViewModel = () => {
      // Special check for Intro to simulate the same Exit behavior on Swipe
      if (nav.stage === AppStage.INTRO) {
         if (window.confirm(t.common.confirm_exit_app)) {
-           // Simulate browser back for exit
            window.history.back();
            return;
         }
         return;
      }
 
-     if (nav.stage === AppStage.TOPIC_SELECTION && topicMgr.state.selectionPhase === 'SUBTOPIC') {
-        topicMgr.actions.backToCategories();
-        return;
-     }
-
+     // Removed manual internal handling for SUBTOPIC phase.
+     // By calling history.back(), we trigger the popstate event, which calls performBackNavigation.
+     // This ensures consistent behavior with the swipe-back gesture and prevents flash of Intro.
      window.history.back();
-  }, [isPending, quiz.state.isSubmitting, nav.stage, topicMgr.state.selectionPhase, topicMgr.actions, t.common.confirm_exit_app]);
+  }, [isPending, quiz.state.isSubmitting, nav.stage, t.common.confirm_exit_app]);
 
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 
@@ -472,7 +459,11 @@ export const useGameViewModel = () => {
       nav.setStage(AppStage.TOPIC_SELECTION);
     },
     selectCategory: topicMgr.actions.selectCategory,
-    proceedToSubTopics: topicMgr.actions.proceedToSubTopics,
+    proceedToSubTopics: () => {
+        topicMgr.actions.proceedToSubTopics();
+        // Push a new history entry so swipe-back works correctly without flashing Intro
+        window.history.pushState({ stage: AppStage.TOPIC_SELECTION, phase: 'SUBTOPIC' }, '');
+    },
     selectSubTopic: topicMgr.actions.selectSubTopic,
     setDifficulty: topicMgr.actions.setDifficulty,
     shuffleTopics: topicMgr.actions.shuffleTopics,
