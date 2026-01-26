@@ -67,7 +67,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ t, userProfile, langua
   const btnStyle = "text-white bg-slate-800/80 backdrop-blur-md p-2 rounded-full hover:bg-slate-700 transition-all border border-white/10 shadow-lg";
 
   return (
-    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
+    // Removed bg-slate-950 to be transparent
+    <div className={`w-full h-full relative flex flex-col ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Main Glass Panel */}
       <div className="glass-panel flex flex-col flex-grow h-0 rounded-3xl overflow-hidden shadow-2xl">

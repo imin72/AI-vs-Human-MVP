@@ -266,7 +266,8 @@ export const StageResults: React.FC<StageResultsProps> = ({
   };
 
   return (
-    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
+    // Removed bg-slate-950 to be transparent
+    <div className={`w-full h-full relative flex flex-col ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Top Controls */}
       <div className="flex justify-between items-center mb-3 shrink-0 z-20 px-4 pt-2">

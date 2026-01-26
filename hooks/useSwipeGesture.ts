@@ -26,8 +26,16 @@ export const useSwipeGesture = ({
     // Only track single touch to avoid conflict with pinch-to-zoom
     if (e.targetTouches.length !== 1) return;
     
+    const clientX = e.targetTouches[0].clientX;
+
+    // EDGE GUARD: If the touch starts extremely close to the left edge (< 30px),
+    // it is highly likely a native iOS swipe-back gesture.
+    // We strictly ignore these to avoid "double navigation" or visual glitches where
+    // both the browser and our app try to handle the back action.
+    if (clientX < 30) return;
+
     touchStartRef.current = {
-      x: e.targetTouches[0].clientX,
+      x: clientX,
       y: e.targetTouches[0].clientY,
       time: Date.now()
     };
@@ -60,13 +68,11 @@ export const useSwipeGesture = ({
       // Swipe Right (Back Action)
       if (deltaX > 0 && onSwipeRight) {
         // CONFLICT FIX:
-        // If we are in a regular browser (not standalone), the browser likely has its own 
-        // native swipe-to-back (especially iOS). We should NOT trigger our custom back logic 
-        // here because it causes a "double back" or visual overlap glitch.
-        // We only enable custom swipe-back in standalone mode where native nav is absent.
+        // Only enable custom swipe-back in standalone mode where native nav is absent.
+        // In browser mode, rely on native browser controls.
         if (isStandalone) {
-           // Edge check: Start within 30px of left edge for iOS-like feel
-           const isEdge = touchStartRef.current.x < 30;
+           // Double check edge (though onTouchStart filters strict edge, we check loose edge here)
+           const isEdge = touchStartRef.current.x < 50;
            if (!edgeOnly || isEdge) {
                onSwipeRight();
            }

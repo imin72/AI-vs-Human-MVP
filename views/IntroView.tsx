@@ -107,10 +107,9 @@ export const IntroView: React.FC<IntroViewProps> = ({
   const showDebug = isEnvDebug || showDebugOverride;
 
   return (
-    // STRONG FIX: 
-    // 1. bg-slate-950: Ensures opaque background so underlying browser snapshots don't bleed through.
-    // 2. Conditional animate-fade-in: Disables React animation when swiping back to prevent conflict with native browser swipe.
-    <div className={`w-full max-w-2xl relative flex flex-col items-center h-full bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
+    // REMOVED bg-slate-950 to allow Layout background (stars) to show through.
+    // This prevents the visual glitch where the background turns black during swipe-back.
+    <div className={`w-full max-w-2xl relative flex flex-col items-center h-full ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* New Language Selection Header */}
       <div className="w-full flex justify-center gap-3 py-6 z-20 shrink-0">
@@ -165,17 +164,28 @@ export const IntroView: React.FC<IntroViewProps> = ({
         </div>
 
         <div className="w-full max-w-md space-y-4 shrink-0">
-          <Button onClick={onStart} fullWidth className="h-16 group shadow-cyan-500/20 px-2 md:px-6">
+          {/* 
+             Updated Button Layout:
+             - min-h-[4rem] (64px) standard height
+             - text-sm for 'continue' (longer text), text-base/lg for 'start' (shorter)
+             - leading-tight and whitespace-normal allow safe wrapping without truncation
+             - Flex layout ensures centering
+          */}
+          <Button onClick={onStart} fullWidth className="min-h-[4rem] h-auto py-3 px-4 group shadow-cyan-500/20">
             {hasProfile ? (
-              <span className="flex items-center justify-center gap-2 w-full overflow-hidden">
-                <UserCheck size={20} className="shrink-0" /> 
-                <span className="truncate text-base md:text-lg">{t.btn_continue}</span>
-              </span>
+              <div className="flex items-center justify-center gap-3 w-full">
+                <UserCheck size={20} className="shrink-0 text-cyan-400" /> 
+                <span className="text-sm font-bold leading-tight text-center break-words whitespace-normal">
+                  {t.btn_continue}
+                </span>
+              </div>
             ) : (
-              <span className="flex items-center justify-center gap-2 w-full overflow-hidden">
-                <span className="truncate text-base md:text-lg">{t.btn_start}</span> 
+              <div className="flex items-center justify-center gap-3 w-full">
+                <span className="text-base md:text-lg font-bold leading-tight text-center whitespace-normal">
+                  {t.btn_start}
+                </span> 
                 <ArrowRight className="group-hover:translate-x-1 transition-transform shrink-0" size={20} />
-              </span>
+              </div>
             )}
           </Button>
           

@@ -95,7 +95,8 @@ export const TopicSelectionView: React.FC<TopicSelectionViewProps> = ({ t, state
   const progressPercent = Math.min(100, Math.max(0, ((aggregateElo - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
 
   return (
-    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
+    // Removed bg-slate-950 to be transparent
+    <div className={`w-full h-full relative flex flex-col ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Main Glass Panel */}
       <div className="glass-panel flex flex-col flex-grow h-0 rounded-3xl overflow-hidden shadow-2xl">
