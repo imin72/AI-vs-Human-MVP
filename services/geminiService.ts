@@ -320,7 +320,7 @@ export const generateQuestionsBatch = async (
       });
 
       // Handle async updates sequentially or using Promise.all
-      const updatePromises = [];
+      const updatePromises: Promise<void>[] = [];
 
       missingRequests.forEach(req => {
         if (generatedData[req.stableId]) {
