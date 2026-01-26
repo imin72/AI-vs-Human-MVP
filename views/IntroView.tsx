@@ -104,7 +104,8 @@ export const IntroView: React.FC<IntroViewProps> = ({
   const showDebug = isEnvDebug || showDebugOverride;
 
   return (
-    <div className="w-full max-w-2xl relative flex flex-col items-center animate-fade-in h-full">
+    // Added bg-slate-950 to ensure opacity against history snapshots
+    <div className="w-full max-w-2xl relative flex flex-col items-center animate-fade-in h-full bg-slate-950/0">
       
       {/* New Language Selection Header */}
       <div className="w-full flex justify-center gap-3 py-6 z-20 shrink-0">
@@ -127,18 +128,22 @@ export const IntroView: React.FC<IntroViewProps> = ({
       {/* Main Content */}
       <div className="glass-panel p-8 rounded-3xl text-center w-full flex flex-col items-center justify-center flex-grow mb-8 min-h-[550px]">
         <div className="flex justify-center gap-6 mb-8 shrink-0">
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400 mb-2 border border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-              <Brain size={32} />
-            </div>
-            <span className="text-sm font-bold tracking-widest text-rose-400">{t.human_label}</span>
-          </div>
-          <div className="h-16 w-px bg-slate-700 self-center"></div>
+          {/* AI (Left) */}
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 bg-cyan-500/20 rounded-2xl flex items-center justify-center text-cyan-400 mb-2 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
               <Cpu size={32} />
             </div>
             <span className="text-sm font-bold tracking-widest text-cyan-400">{t.ai_label}</span>
+          </div>
+          
+          <div className="h-16 w-px bg-slate-700 self-center"></div>
+          
+          {/* Human (Right) */}
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400 mb-2 border border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
+              <Brain size={32} />
+            </div>
+            <span className="text-sm font-bold tracking-widest text-rose-400">{t.human_label}</span>
           </div>
         </div>
         
@@ -155,14 +160,16 @@ export const IntroView: React.FC<IntroViewProps> = ({
         </div>
 
         <div className="w-full max-w-md space-y-4 shrink-0">
-          <Button onClick={onStart} fullWidth className="text-lg h-16 group shadow-cyan-500/20">
+          <Button onClick={onStart} fullWidth className="h-16 group shadow-cyan-500/20 px-2 md:px-6">
             {hasProfile ? (
-              <span className="flex items-center justify-center gap-2">
-                <UserCheck size={20} /> <span className="truncate">{t.btn_continue}</span>
+              <span className="flex items-center justify-center gap-2 w-full overflow-hidden">
+                <UserCheck size={20} className="shrink-0" /> 
+                <span className="truncate text-base md:text-lg">{t.btn_continue}</span>
               </span>
             ) : (
-              <span className="flex items-center justify-center gap-2">
-                {t.btn_start} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              <span className="flex items-center justify-center gap-2 w-full overflow-hidden">
+                <span className="truncate text-base md:text-lg">{t.btn_start}</span> 
+                <ArrowRight className="group-hover:translate-x-1 transition-transform shrink-0" size={20} />
               </span>
             )}
           </Button>

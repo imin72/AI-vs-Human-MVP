@@ -34,6 +34,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
     if (stage === AppStage.INTRO) {
        // Root state - usually we don't push here to avoid loop
+       // Ensure we are at root state logic if needed, but typically replaceState handled in goHome
     } else if (TRANSIENT_STAGES.includes(stage)) {
        // Replace current entry for transient stages
        window.history.replaceState({ stage }, '');
@@ -53,8 +54,13 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     }
     
     if (onConfirmAction) onConfirmAction();
+    
+    // IMPORTANT: Set flag to prevent useEffect from pushing a new 'INTRO' state on top
+    // We want to reset the stack effectively.
+    isNavigatingBackRef.current = true;
     setStage(AppStage.INTRO); 
-    // Replace the current history entry with root to "reset" the effective head of history
+    
+    // Reset history stack to root
     window.history.replaceState({ stage: 'root' }, '', window.location.pathname);
   }, [stage]);
 

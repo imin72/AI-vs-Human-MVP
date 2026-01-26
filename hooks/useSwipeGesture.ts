@@ -15,6 +15,13 @@ export const useSwipeGesture = ({
 }: SwipeConfig) => {
   const touchStartRef = useRef<{ x: number, y: number, time: number } | null>(null);
 
+  // Check if running in standalone mode (PWA installed)
+  // iOS Safari "standalone" property or standard display-mode check
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches || 
+    (window.navigator as any).standalone === true
+  );
+
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     // Only track single touch to avoid conflict with pinch-to-zoom
     if (e.targetTouches.length !== 1) return;
@@ -52,11 +59,17 @@ export const useSwipeGesture = ({
     if (isFast && isHorizontal && isSignificant) {
       // Swipe Right (Back Action)
       if (deltaX > 0 && onSwipeRight) {
-        // Edge check: Start within 30px of left edge for iOS-like feel, 
-        // preventing accidental swipes in the middle of content
-        const isEdge = touchStartRef.current.x < 30;
-        if (!edgeOnly || isEdge) {
-            onSwipeRight();
+        // CONFLICT FIX:
+        // If we are in a regular browser (not standalone), the browser likely has its own 
+        // native swipe-to-back (especially iOS). We should NOT trigger our custom back logic 
+        // here because it causes a "double back" or visual overlap glitch.
+        // We only enable custom swipe-back in standalone mode where native nav is absent.
+        if (isStandalone) {
+           // Edge check: Start within 30px of left edge for iOS-like feel
+           const isEdge = touchStartRef.current.x < 30;
+           if (!edgeOnly || isEdge) {
+               onSwipeRight();
+           }
         }
       } 
       // Swipe Left (Forward/Next Action - Optional)
@@ -66,7 +79,7 @@ export const useSwipeGesture = ({
     }
 
     touchStartRef.current = null;
-  }, [onSwipeRight, onSwipeLeft, threshold, edgeOnly]);
+  }, [onSwipeRight, onSwipeLeft, threshold, edgeOnly, isStandalone]);
 
   return { onTouchStart, onTouchEnd };
 };
