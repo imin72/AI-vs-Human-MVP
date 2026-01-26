@@ -1,12 +1,15 @@
 
 /**
- * PRODUCTION SEEDER SCRIPT
+ * 🏭 COGNITO FACTORY: MASTER SEEDER SCRIPT
  * 
  * Usage: node scripts/seed.js
  * 
- * Purpose:
- * Pre-generates high-quality questions for ALL defined topics and ALL difficulties.
- * Implements "Cognitive Depth" prompting to ensure objective difficulty levels.
+ * Logic:
+ * 1. Iterates through all defined Categories and Topics.
+ * 2. Checks data/questions/*.ts files to see if questions already exist.
+ * 3. If questions are missing (target count not met), calls Gemini API.
+ * 4. Generates questions for ALL difficulties (EASY, MEDIUM, HARD).
+ * 5. Appends the new questions directly to the .ts files.
  */
 
 import { GoogleGenAI } from "@google/genai";
@@ -17,25 +20,28 @@ import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
+dotenv.config({ path: '.env.local' }); // Also check .env.local
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const API_KEY = process.env.API_KEY || process.env.VITE_API_KEY;
+const API_KEY = process.env.API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_API_KEY;
 
-if (!API_KEY) {
-  console.error("❌ API_KEY is missing in .env file");
+if (!API_KEY || API_KEY.includes("PLACEHOLDER")) {
+  console.error("❌ ERROR: Valid API_KEY is missing in .env or .env.local");
+  console.error("Please add: API_KEY=AIzaSy...");
   process.exit(1);
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 const MODEL_NAME = 'gemini-2.5-flash'; 
 
-// Configuration
-const QUESTIONS_PER_BATCH = 3; // Reduced batch size to accommodate multi-difficulty loop
-const TARGET_TOTAL_PER_DIFF = 5; // Target questions per difficulty level
-const TARGET_LANG = "en"; // Master data is English
+// --- ⚙️ CONFIGURATION (조절 가능) ---
+const QUESTIONS_PER_BATCH = 5;  // 한 번 요청에 생성할 문제 수 (최대 5~10 권장)
+const TARGET_TOTAL = 5;         // 난이도별 목표 문제 수 (운영 시 10~20으로 늘리세요)
+const TARGET_LANG = "en";       // 마스터 데이터는 영어로 생성 (앱이 실시간 번역 가능)
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
+// -------------------------------------
 
 // Complete Topic Map
 const TOPIC_MAP = {
@@ -57,160 +63,129 @@ const TOPIC_MAP = {
   "PHILOSOPHY": ["Ethics", "Logic", "Metaphysics", "Existentialism", "Stoicism", "Nihilism", "Political Philosophy", "Eastern Philosophy", "Ancient Greek", "Enlightenment", "Utilitarianism", "Aesthetics", "Epistemology", "Philosophy of Mind", "Famous Quotes", "Paradoxes"]
 };
 
-// Helper: Sleep
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// Helper: Difficulty Prompts
 const getDifficultyInstruction = (difficulty) => {
   switch (difficulty) {
     case "EASY":
-      return `
-        Target Audience: General Public / Beginners.
-        Focus: Basic definitions, famous figures, key events, and widely known facts.
-        Style: Straightforward "Who/What/Where" questions.
-        Avoid: Obscure dates, complex analysis, or trick questions.
-      `;
+      return `Target: General public. Focus: Definitions, famous facts, 'What/Who'. Avoid obscurity.`;
     case "MEDIUM":
-      return `
-        Target Audience: Enthusiasts / Students.
-        Focus: Cause and effect, context, comparisons, and "Why/How".
-        Style: Requires understanding the relationship between concepts, not just memorization.
-        Avoid: Surface-level trivia (too easy) or academic minutiae (too hard).
-      `;
+      return `Target: Enthusiasts. Focus: Context, 'How/Why', comparisons. Requires understanding.`;
     case "HARD":
-      return `
-        Target Audience: Experts / Obsessives.
-        Focus: Nuance, exceptions to rules, misconceptions, specific technical details, or complex multi-step reasoning.
-        Style: "Which of the following is NOT...", chronological ordering, or specific data points.
-        Goal: To challenge someone who thinks they know everything about the topic.
-      `;
-    default:
-      return "";
+      return `Target: Experts. Focus: Nuance, specific dates, technical details, exceptions. Very challenging.`;
+    default: return "";
   }
 };
 
-async function generateQuestions(topic, difficulty, count, existingQuestions = []) {
-  const existingContexts = existingQuestions.map(q => q.question.substring(0, 20));
+async function generateQuestions(topic, difficulty, count) {
   const diffInstruction = getDifficultyInstruction(difficulty);
-  
   const prompt = `
     Generate ${count} multiple-choice questions about "${topic}".
-    
-    DIFFICULTY LEVEL: ${difficulty}
-    ${diffInstruction}
-    
+    DIFFICULTY: ${difficulty}. ${diffInstruction}
     Constraints:
-    - **STRICT OBJECTIVITY**: Questions must be based on absolute facts.
-    - **NO DUPLICATES**: Avoid asking about: ${JSON.stringify(existingContexts)}.
+    - STRICTLY OBJECTIVE FACTS ONLY.
     - Language: English
-    - Format: JSON Array of objects with keys: id (number), question (string), options (string array), correctAnswer (string), context (string).
-    - Context: A short, interesting fact explaining the answer.
-    - ID: Use random unique integers.
+    - JSON Format: Array of objects { id, question, options (4 strings), correctAnswer, context }.
+    - ID: Use a random integer.
   `;
 
-  const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-          responseMimeType: "application/json"
-      }
-  });
-
-  const rawText = response.text || "[]";
-  const jsonText = rawText.replace(/```json|```/g, "").trim();
-  return JSON.parse(jsonText);
+  try {
+    const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: { responseMimeType: "application/json" }
+    });
+    const text = response.text || "[]";
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch (e) {
+    console.error(`      ⚠️ API Error: ${e.message}`);
+    return [];
+  }
 }
 
 async function runSeeder() {
-  console.log("🏭 Starting Cognito Factory Seeder (Multi-Difficulty Mode)...");
-  
+  console.log(`\n🏭 COGNITO PROTOCOL: DATA FACTORY INITIALIZED`);
+  console.log(`🎯 Target: ${TARGET_TOTAL} questions per [Topic/Difficulty]`);
+  console.log(`🔑 API Key detected.`);
+
   for (const [category, subtopics] of Object.entries(TOPIC_MAP)) {
-    console.log(`\n📂 Category: ${category}`);
+    console.log(`\n📂 CATEGORY: ${category}`);
     
+    // 1. Prepare File
     const filename = `${category.toLowerCase()}.ts`;
     const filePath = path.resolve(__dirname, '../data/questions', filename);
+    const dirPath = path.dirname(filePath);
 
-    // 1. Ensure File Exists
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+    
     if (!fs.existsSync(filePath)) {
-      console.log(`   + Creating ${filename}`);
       fs.writeFileSync(filePath, `import { QuizQuestion } from '../../types';\n\nexport const ${category}_DB: Record<string, QuizQuestion[]> = {\n};`);
+      console.log(`   + Created file: ${filename}`);
     }
 
-    let fileContent = fs.readFileSync(filePath, 'utf-8');
-
+    // 2. Iterate Topics
     for (const topic of subtopics) {
-      console.log(`   👉 Topic: ${topic}`);
+      process.stdout.write(`   👉 ${topic.padEnd(25)} `);
 
-      // Loop through ALL difficulties for each topic
       for (const difficulty of DIFFICULTIES) {
         const key = `${topic}_${difficulty}_${TARGET_LANG}`;
-        
-        // Check existing count for this specific difficulty key
+        let fileContent = fs.readFileSync(filePath, 'utf-8');
+
+        // Check current count in file using Regex
         const regex = new RegExp(`"${key}":\\s*\\[([\\s\\S]*?)\\]`, 'm');
         const match = fileContent.match(regex);
-        
         let currentCount = 0;
-        let existingData = [];
         
         if (match) {
-          try {
-             currentCount = (match[1].match(/id:/g) || []).length;
-          } catch (e) { }
+          // Count occurences of "id" to guess number of questions
+          currentCount = (match[1].match(/"id":/g) || []).length;
         }
 
-        if (currentCount >= TARGET_TOTAL_PER_DIFF) {
-          process.stdout.write(`      [${difficulty}: Full]`);
+        if (currentCount >= TARGET_TOTAL) {
+          process.stdout.write(`[${difficulty[0]}:✔] `); // Skip
           continue;
         }
 
-        const needed = TARGET_TOTAL_PER_DIFF - currentCount;
+        // Generate missing
+        const needed = TARGET_TOTAL - currentCount;
         const batchSize = Math.min(needed, QUESTIONS_PER_BATCH);
         
-        process.stdout.write(`      [${difficulty}: Gen ${batchSize}...]`);
+        // Rate Limiting Pause (Free tier friendly)
+        await sleep(2000); 
 
-        try {
-          const newQuestions = await generateQuestions(topic, difficulty, batchSize, existingData);
-          
-          if (!Array.isArray(newQuestions) || newQuestions.length === 0) continue;
-
-          // Unique IDs
-          const finalQuestions = newQuestions.map((q, idx) => ({
+        const newQuestions = await generateQuestions(topic, difficulty, batchSize);
+        
+        if (newQuestions.length > 0) {
+           // Fix IDs to be unique
+           const cleanQuestions = newQuestions.map((q, idx) => ({
              ...q,
-             id: Date.now() + Math.floor(Math.random() * 100000) + idx
-          }));
+             id: Date.now() + Math.floor(Math.random() * 1000000) + idx
+           }));
 
-          // FILE INSERTION
-          // We need to re-read file content inside the loop in case previous iterations modified it
-          fileContent = fs.readFileSync(filePath, 'utf-8');
-          const freshMatch = fileContent.match(regex);
-
-          if (freshMatch) {
-              // Append to existing array
-              const closingBracketIndex = freshMatch.index + freshMatch[0].lastIndexOf(']');
-              const arrayContent = JSON.stringify(finalQuestions, null, 2).slice(1, -1); 
-              const insertStr = `,${arrayContent}`;
-              fileContent = fileContent.slice(0, closingBracketIndex) + insertStr + fileContent.slice(closingBracketIndex);
-          } else {
-              // Create new entry
-              const newEntry = `\n  "${key}": ${JSON.stringify(finalQuestions, null, 2)},`;
+           // Append Logic
+           if (match) {
+              // Insert into existing array
+              const closingBracket = match.index + match[0].lastIndexOf(']');
+              const jsonStr = JSON.stringify(cleanQuestions, null, 2).slice(1, -1); // remove outer []
+              const insert = currentCount > 0 ? `,${jsonStr}` : jsonStr;
+              fileContent = fileContent.slice(0, closingBracket) + insert + fileContent.slice(closingBracket);
+           } else {
+              // Create new key
+              const newEntry = `\n  "${key}": ${JSON.stringify(cleanQuestions, null, 2)},`;
               const lastBrace = fileContent.lastIndexOf('};');
               fileContent = fileContent.slice(0, lastBrace) + newEntry + "\n};";
-          }
-
-          fs.writeFileSync(filePath, fileContent);
-          process.stdout.write(` ✅`);
-          
-          await sleep(1500); // Rate limit
-
-        } catch (e) {
-          console.error(`\n      ❌ Error: ${e.message}`);
-          await sleep(5000);
+           }
+           
+           fs.writeFileSync(filePath, fileContent);
+           process.stdout.write(`[${difficulty[0]}:+${cleanQuestions.length}] `);
+        } else {
+           process.stdout.write(`[${difficulty[0]}:x] `);
         }
       }
-      console.log(""); // New line after topic
+      console.log(""); // New line
     }
   }
-  console.log("\n\n✨ All topics processed.");
+  console.log("\n✨ FACTORY SHUTDOWN. ALL DATA SECURED.");
 }
 
 runSeeder();
