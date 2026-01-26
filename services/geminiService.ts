@@ -3,7 +3,7 @@ import { QuizQuestion, EvaluationResult, Difficulty, UserProfile, Language, Quiz
 import { getStaticQuestions, resolveTopicInfo } from "../data/staticDatabase";
 
 // Import new separated services
-import { generateCacheKey, loadQuizCache, updateCacheEntry, saveQuizCache } from "./cacheManager";
+import { generateCacheKey, getCacheEntry, updateCacheEntry } from "./cacheManager";
 import { generateContentJSON } from "./geminiClient";
 
 // Import AI Persona DB
@@ -104,7 +104,7 @@ export const seedLocalDatabase = async (onProgress: (msg: string) => void) => {
         }
 
         // Update Cache
-        updateCacheEntry(generateCacheKey(topic, difficulty, lang), questions);
+        await updateCacheEntry(generateCacheKey(topic, difficulty, lang), questions);
         
         await new Promise(r => setTimeout(r, 1000));
 
@@ -165,12 +165,13 @@ const triggerBackgroundTranslation = async (
     });
 
     // Update Cache and File System
-    const quizCache = loadQuizCache();
     for (const lang of targetLangs) {
       if (translatedData[lang]) {
         const questions = translatedData[lang];
         const key = generateCacheKey(topicId, difficulty, lang as Language);
-        quizCache[key] = questions;
+        
+        // Update IndexedDB
+        await updateCacheEntry(key, questions);
 
         fetch('/__save-question', {
             method: 'POST',
@@ -183,7 +184,6 @@ const triggerBackgroundTranslation = async (
         }).catch(() => {});
       }
     }
-    saveQuizCache(quizCache);
 
   } catch (error) {
     console.warn(`[Background] Translation failed for ${topicId}`, error);
@@ -200,7 +200,6 @@ export const generateQuestionsBatch = async (
   lang: Language,
   userProfile?: UserProfile
 ): Promise<QuizSet[]> => {
-  const quizCache = loadQuizCache();
   const results: QuizSet[] = [];
   
   const resolvedRequests = topics.map(topicLabel => {
@@ -230,9 +229,9 @@ export const generateQuestionsBatch = async (
       }
     }
 
-    // 2. Cache Check
-    if (quizCache[cacheKey]) {
-       const cached = quizCache[cacheKey];
+    // 2. Cache Check (Async IndexedDB)
+    const cached = await getCacheEntry(cacheKey);
+    if (cached) {
        const unseen = cached.filter((q: QuizQuestion) => !seenIds.has(q.id));
        if (unseen.length >= 5) {
            results.push({ topic: req.originalLabel, questions: unseen.sort(() => 0.5 - Math.random()).slice(0, 5), categoryId: req.catId });
@@ -270,7 +269,7 @@ export const generateQuestionsBatch = async (
         const translatedQs = await generateContentJSON(prompt);
         
         // Cache It
-        updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), translatedQs);
+        await updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), translatedQs);
         results.push({ topic: req.originalLabel, questions: translatedQs, categoryId: req.catId });
         console.log(`[Source: Translation] ${req.stableId}`);
 
@@ -320,6 +319,9 @@ export const generateQuestionsBatch = async (
         required: targetIds
       });
 
+      // Handle async updates sequentially or using Promise.all
+      const updatePromises = [];
+
       missingRequests.forEach(req => {
         if (generatedData[req.stableId]) {
           const raw = generatedData[req.stableId];
@@ -327,7 +329,7 @@ export const generateQuestionsBatch = async (
              ...q, id: q.id || Math.floor(Math.random() * 100000) + Date.now()
           }));
           
-          updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), formatted);
+          updatePromises.push(updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), formatted));
           results.push({ topic: req.originalLabel, questions: formatted, categoryId: req.catId });
           
           // Dev: Save & Mirror
@@ -341,6 +343,9 @@ export const generateQuestionsBatch = async (
           }
         }
       });
+      
+      await Promise.all(updatePromises);
+
     } catch (e) {
       console.error("Batch Gen Failed", e);
       missingRequests.forEach(req => {
