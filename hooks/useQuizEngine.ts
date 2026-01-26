@@ -19,22 +19,38 @@ export const useQuizEngine = () => {
   const [batchProgress, setBatchProgress] = useState<{ total: number, current: number, topics: string[] }>({ total: 0, current: 0, topics: [] });
   const [completedBatches, setCompletedBatches] = useState<AccumulatedBatchData[]>([]);
 
-  const initQuiz = useCallback((quizSets: QuizSet[]) => {
-    if (quizSets.length === 0) return;
+  // Modified to accept allTopicLabels to setup progress bar even if data isn't ready
+  const initQuiz = useCallback((initialQuizSets: QuizSet[], allTopicLabels: string[]) => {
+    if (initialQuizSets.length === 0 && allTopicLabels.length === 0) return;
     
-    const [first, ...rest] = quizSets;
-    setQuizQueue(rest);
-    setCurrentQuizSet(first);
-    setQuestions(first.questions);
+    // Set the first topic
+    const [first, ...rest] = initialQuizSets;
+    
+    // If we have at least one set, initialize immediately
+    if (first) {
+      setCurrentQuizSet(first);
+      setQuestions(first.questions);
+      setQuizQueue(rest); // Put remaining *loaded* sets in queue
+    } else {
+       // Should not happen in normal pipeline flow, but safety check
+       setQuizQueue([]);
+    }
+
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setCompletedBatches([]);
     
+    // Initialize progress based on ALL intended topics, not just loaded ones
     setBatchProgress({
-      total: quizSets.length,
+      total: allTopicLabels.length,
       current: 1,
-      topics: quizSets.map(qs => qs.topic)
+      topics: allTopicLabels
     });
+  }, []);
+
+  // New action to add background-loaded quizzes to the queue
+  const appendQuizSets = useCallback((newQuizSets: QuizSet[]) => {
+    setQuizQueue(prev => [...prev, ...newQuizSets]);
   }, []);
 
   const selectOption = useCallback((option: string) => {
@@ -55,7 +71,7 @@ export const useQuizEngine = () => {
     setCompletedBatches([]);
   }, []);
 
-  const handleNextTopic = useCallback(() => {
+  const handleNextTopic = useCallback((): boolean => {
     if (quizQueue.length > 0) {
        const [next, ...rest] = quizQueue;
        
@@ -71,7 +87,9 @@ export const useQuizEngine = () => {
           ...prev,
           current: prev.current + 1
        }));
+       return true; // Successfully moved to next
     }
+    return false; // Queue empty
   }, [quizQueue]);
 
   return {
@@ -91,6 +109,7 @@ export const useQuizEngine = () => {
     },
     actions: {
       initQuiz,
+      appendQuizSets, // Exported
       selectOption,
       resetQuizState,
       setIsSubmitting,

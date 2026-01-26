@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AppStage, Language, QuizSet, HistoryItem, EvaluationResult, QuizQuestion } from '../types';
 import { generateQuestionsBatch, evaluateBatchAnswers, BatchEvaluationInput, seedLocalDatabase } from '../services/geminiService';
 import { audioHaptic } from '../services/audioHapticService';
@@ -49,13 +49,18 @@ export const useGameViewModel = () => {
   const [isPending, setIsPending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
+  // New State for Pipeline Loading
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
+  // Ref to track if we need to auto-advance when background loading finishes
+  const waitingForNextTopicRef = useRef(false);
+  
   // 2. Composed Hooks
   const nav = useAppNavigation();
   const profile = useUserProfile();
   const topicMgr = useTopicManager(language);
   const quiz = useQuizEngine();
 
-  // 3. Result State (Still managed here as it connects Quiz -> Profile)
+  // 3. Result State
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [sessionResults, setSessionResults] = useState<EvaluationResult[]>([]); 
 
@@ -69,7 +74,6 @@ export const useGameViewModel = () => {
     audioHaptic.playClick('hard');
 
     try {
-      // Prepare data for API & Local Profile Updates
       const batchInputs: BatchEvaluationInput[] = [];
       const updatedProfile = { ...profile.userProfile };
       const currentScores = { ...(updatedProfile.scores || {}) };
@@ -82,12 +86,10 @@ export const useGameViewModel = () => {
         const totalCount = batch.answers.length;
         const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
         
-        // Update High Score
         if (score >= (currentScores[batch.topicLabel] || 0)) {
            currentScores[batch.topicLabel] = score;
         }
 
-        // Adaptive Learning Logic
         batch.answers.forEach(a => seenIds.add(a.questionId));
 
         const currentElo = currentElos[batch.topicId] || 1000;
@@ -117,7 +119,6 @@ export const useGameViewModel = () => {
         });
       });
 
-      // Save Profile
       updatedProfile.scores = currentScores;
       updatedProfile.eloRatings = currentElos;
       updatedProfile.seenQuestionIds = Array.from(seenIds);
@@ -125,7 +126,6 @@ export const useGameViewModel = () => {
       
       profile.actions.persistProfile(updatedProfile);
 
-      // Debug Mode Check
       const isDebug = allBatches.some(b => b.topicLabel.startsWith("Debug"));
       if (isDebug) {
          await new Promise(resolve => setTimeout(resolve, 800));
@@ -154,10 +154,8 @@ export const useGameViewModel = () => {
          return;
       }
 
-      // Real API Call
       const results = await evaluateBatchAnswers(batchInputs, updatedProfile, language);
       
-      // Inject IDs
       const resultsWithIds = results.map((res, idx) => ({
         ...res,
         id: allBatches[idx].topicId
@@ -178,7 +176,96 @@ export const useGameViewModel = () => {
     }
   };
 
-  // --- Orchestration: Confirm Answer & Flow Control ---
+  // --- Pipeline: Start Quiz with Lazy Loading ---
+  const startQuizPipeline = async () => {
+    if (isPending) return;
+    const allTopics = topicMgr.state.selectedSubTopics;
+    if (allTopics.length === 0) return;
+
+    try {
+      audioHaptic.playClick('hard');
+      setIsPending(true);
+      nav.setStage(AppStage.LOADING_QUIZ);
+
+      // 1. Separate First Topic & Rest
+      const [firstTopic, ...restTopics] = allTopics;
+      
+      // 2. Fetch FIRST Topic immediately
+      const firstSet = await generateQuestionsBatch(
+        [firstTopic],
+        topicMgr.state.difficulty,
+        language,
+        profile.userProfile
+      );
+
+      if (firstSet.length === 0) throw new Error("Failed to generate initial questions");
+
+      // 3. Initialize Quiz with First Topic, but tell engine about ALL topics
+      quiz.actions.initQuiz(firstSet, allTopics);
+      
+      // 4. Start Game
+      setIsPending(false);
+      nav.setStage(AppStage.QUIZ);
+
+      // 5. Background Fetch for Rest (if any)
+      if (restTopics.length > 0) {
+        setIsBackgroundLoading(true);
+        // Fire and forget (handled by promise chain)
+        generateQuestionsBatch(
+          restTopics,
+          topicMgr.state.difficulty,
+          language,
+          profile.userProfile
+        ).then((backgroundSets) => {
+           if (backgroundSets.length > 0) {
+             quiz.actions.appendQuizSets(backgroundSets);
+           }
+        }).catch((err) => {
+           console.warn("Background loading failed", err);
+           // We silently fail for background topics, user just plays what we have
+        }).finally(() => {
+           setIsBackgroundLoading(false);
+           // If user was stuck waiting, auto-advance now
+           if (waitingForNextTopicRef.current) {
+             waitingForNextTopicRef.current = false;
+             // Small delay to smooth transition
+             setTimeout(() => {
+                if (quiz.actions.handleNextTopic()) {
+                    nav.setStage(AppStage.QUIZ);
+                }
+             }, 500);
+           }
+        });
+      }
+
+    } catch (e: any) {
+      setErrorMsg(e.message || "Failed to initialize protocol");
+      nav.setStage(AppStage.ERROR);
+      setIsPending(false);
+    }
+  };
+
+  // --- Pipeline: Handle Next Topic Transition ---
+  const handleNextTopicInQueue = () => {
+    try { audioHaptic.playClick(); } catch {}
+    
+    // Attempt to move next
+    const success = quiz.actions.handleNextTopic();
+    
+    if (success) {
+      nav.setStage(AppStage.QUIZ);
+    } else {
+      // If failed to move next (queue empty) but background is still loading
+      if (isBackgroundLoading) {
+        waitingForNextTopicRef.current = true;
+        nav.setStage(AppStage.LOADING_QUIZ); // Show loading screen while waiting
+      } else {
+        // Really finished (should have been handled by confirmAnswer, but safe fallback)
+        console.warn("Queue empty and no background loading.");
+      }
+    }
+  };
+
   const confirmAnswer = useCallback(() => {
     if (!quiz.state.selectedOption || quiz.state.isSubmitting) return;
     
@@ -201,7 +288,6 @@ export const useGameViewModel = () => {
     const updatedAnswers = [...quiz.state.userAnswers, answer];
     quiz.actions.setUserAnswers(updatedAnswers);
     
-    // Move to next question or finish topic
     if (quiz.state.currentQuestionIndex < quiz.state.questions.length - 1) {
       setTimeout(() => {
          quiz.actions.setCurrentQuestionIndex(prev => prev + 1);
@@ -222,19 +308,32 @@ export const useGameViewModel = () => {
       const newCompletedBatches = [...quiz.state.completedBatches, batchData];
       quiz.actions.setCompletedBatches(newCompletedBatches);
 
-      if (quiz.state.remainingTopics > 0) {
-         // Proceed to next topic in queue
+      const isLastTopic = quiz.state.batchProgress.current >= quiz.state.batchProgress.total;
+
+      if (!isLastTopic) {
+         // Auto-advance logic wrapper
          setTimeout(() => {
-             quiz.actions.handleNextTopic();
+             // Check if next topic is ready
+             const hasNext = quiz.state.quizQueue.length > 0;
+             if (hasNext) {
+                 quiz.actions.handleNextTopic();
+                 quiz.actions.setIsSubmitting(false); // Unlock
+             } else {
+                 // Next topic not ready yet (Background loading...)
+                 // Show Loading Screen and wait
+                 waitingForNextTopicRef.current = true;
+                 nav.setStage(AppStage.LOADING_QUIZ);
+                 // Note: isSubmitting stays true until next topic loads to prevent double clicks
+                 // It will be reset when handleNextTopic is called in the Finally block
+             }
          }, 800);
       } else {
-         // All Topics Finished
          finishBatchQuiz(newCompletedBatches).then(() => {
              quiz.actions.setIsSubmitting(false);
          });
       }
     }
-  }, [quiz, nav, profile.userProfile, language]);
+  }, [quiz, nav, profile.userProfile, language, isBackgroundLoading]);
 
   // --- Browser History Integration ---
   const performBackNavigation = useCallback((): boolean => {
@@ -245,37 +344,32 @@ export const useGameViewModel = () => {
 
     switch (nav.stage) {
       case AppStage.TOPIC_SELECTION:
-        // Case 1: Subtopic -> Category
-        // We handle this internally. We want to INTERCEPT the browser back (restore history).
         if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
             topicMgr.actions.backToCategories();
             return true; 
         }
-        // Case 2: Category -> Intro
-        // We want to ACCEPT the browser back (let history pop to root).
         nav.setStage(AppStage.INTRO); 
         return false;
 
       case AppStage.PROFILE:
         nav.setStage(AppStage.INTRO);
-        return false; // Accept pop to root
+        return false;
 
       case AppStage.INTRO:
-        // Allow default browser behavior (exit app/tab)
         return false;
 
       case AppStage.QUIZ:
         if (window.confirm(confirmHomeMsg)) {
-           // Cleanup and go home
            setIsPending(false);
+           setIsBackgroundLoading(false);
+           waitingForNextTopicRef.current = false;
            quiz.actions.resetQuizState();
            topicMgr.actions.resetSelection();
            setEvaluation(null);
            setSessionResults([]);
            nav.setStage(AppStage.INTRO);
-           return false; // Accept pop to root/previous
+           return false;
         }
-        // Cancelled: Intercept (Restore history state to stay on Quiz)
         return true;
 
       case AppStage.RESULTS:
@@ -287,9 +381,9 @@ export const useGameViewModel = () => {
           setEvaluation(null);
           setSessionResults([]);
           nav.setStage(AppStage.INTRO);
-          return false; // Accept pop
+          return false;
         }
-        return true; // Intercept
+        return true;
 
       default:
         nav.setStage(AppStage.INTRO);
@@ -299,13 +393,8 @@ export const useGameViewModel = () => {
 
   useEffect(() => {
     const handlePopState = (_: PopStateEvent) => {
-      // Browser Back Button was pressed
       nav.isNavigatingBackRef.current = true;
       const handled = performBackNavigation();
-      
-      // If handled internally (Intercepted), we must push state back 
-      // to restore forward history because browser popped it.
-      // If NOT handled (Accepted), we assume the browser pop was correct.
       if (handled) {
          window.history.pushState({ stage: nav.stage }, '');
       }
@@ -314,22 +403,18 @@ export const useGameViewModel = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [performBackNavigation, nav.stage]);
 
-  // --- Manual Back Action (Button or Swipe) ---
   const goBack = useCallback(() => {
      if (isPending || quiz.state.isSubmitting) return;
      try { audioHaptic.playClick('soft'); } catch {}
 
-     // 1. Internal Logic first (Subtopic -> Category)
      if (nav.stage === AppStage.TOPIC_SELECTION && topicMgr.state.selectionPhase === 'SUBTOPIC') {
         topicMgr.actions.backToCategories();
         return;
      }
 
-     // 2. Default: Trigger Browser Back which fires popstate
      window.history.back();
   }, [isPending, quiz.state.isSubmitting, nav.stage, topicMgr.state.selectionPhase, topicMgr.actions]);
 
-  // --- Actions Wrapper for View ---
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 
       try { audioHaptic.playClick('soft'); } catch {}
@@ -369,6 +454,8 @@ export const useGameViewModel = () => {
     goHome: () => {
       nav.goHome(t.common.confirm_home, () => {
         setIsPending(false);
+        setIsBackgroundLoading(false);
+        waitingForNextTopicRef.current = false;
         quiz.actions.resetQuizState();
         topicMgr.actions.resetSelection();
         setEvaluation(null);
@@ -385,38 +472,11 @@ export const useGameViewModel = () => {
       nav.setStage(AppStage.TOPIC_SELECTION);
     },
 
-    startQuiz: async () => {
-      if (isPending) return;
-      if (topicMgr.state.selectedSubTopics.length === 0) return;
-      try { audioHaptic.playClick('hard'); } catch {}
-      setIsPending(true);
-      nav.setStage(AppStage.LOADING_QUIZ);
-      try {
-        const quizSets = await generateQuestionsBatch(
-          topicMgr.state.selectedSubTopics, 
-          topicMgr.state.difficulty, 
-          language, 
-          profile.userProfile
-        );
-        if (quizSets.length > 0) {
-          quiz.actions.initQuiz(quizSets);
-          nav.setStage(AppStage.QUIZ);
-        } else {
-           throw new Error("No questions generated");
-        }
-      } catch (e: any) {
-        setErrorMsg(e.message || "Failed to initialize protocol");
-        nav.setStage(AppStage.ERROR);
-      } finally {
-        setIsPending(false);
-      }
-    },
+    // Swapped original startQuiz with Pipeline version
+    startQuiz: startQuizPipeline,
     
-    nextTopicInQueue: () => {
-      try { audioHaptic.playClick(); } catch {}
-      quiz.actions.handleNextTopic();
-      nav.setStage(AppStage.QUIZ);
-    },
+    // Updated to handle loading wait
+    nextTopicInQueue: handleNextTopicInQueue,
 
     selectOption: quiz.actions.selectOption,
     confirmAnswer,
@@ -434,7 +494,7 @@ export const useGameViewModel = () => {
            categoryId: "GENERAL",
            questions: DEBUG_QUIZ.map(q => ({ ...q, id: q.id + (index * 100) }))
          }));
-         quiz.actions.initQuiz(debugSets);
+         quiz.actions.initQuiz(debugSets, debugTopics);
          nav.setStage(AppStage.QUIZ);
        } catch (e) {
          nav.setStage(AppStage.ERROR);
@@ -454,16 +514,14 @@ export const useGameViewModel = () => {
         nav.setStage(AppStage.LOADING_QUIZ);
         setTimeout(() => nav.setStage(AppStage.INTRO), 3000);
     },
-  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t, goBack]);
+  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t, goBack, startQuizPipeline, handleNextTopicInQueue]);
 
-  // --- Initialize Swipe Gestures ---
   const swipeHandlers = useSwipeGesture({
     onSwipeRight: goBack,
-    edgeOnly: true, // Only swipe from edge to go back (Native-like)
+    edgeOnly: true,
     threshold: 60
   });
 
-  // Return Facade
   return {
     state: {
       stage: nav.stage,
@@ -479,7 +537,7 @@ export const useGameViewModel = () => {
       resultState: { evaluation, sessionResults, errorMsg } 
     },
     actions,
-    swipeHandlers, // Expose swipe handlers
+    swipeHandlers,
     t
   };
 };
