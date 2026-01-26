@@ -1,4 +1,3 @@
-
 /**
  * 🏭 COGNITO FACTORY: MASTER SEEDER SCRIPT
  * 
@@ -12,7 +11,6 @@
  * 5. Appends the new questions directly to the .ts files.
  */
 
-import { GoogleGenAI } from "@google/genai";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,6 +19,19 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 dotenv.config({ path: '.env.local' }); // Also check .env.local
+
+// --- Dynamic Import for Better Error Handling ---
+let GoogleGenAI;
+try {
+  const genai = await import("@google/genai");
+  GoogleGenAI = genai.GoogleGenAI;
+} catch (error) {
+  console.error('\n\x1b[31m%s\x1b[0m', '❌ CRITICAL ERROR: Missing dependency "@google/genai"');
+  console.error('   The seeder script requires the Gemini SDK to function.');
+  console.error('   Please run the following command to install it:\n');
+  console.error('   \x1b[36mnpm install\x1b[0m\n');
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

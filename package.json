@@ -1,4 +1,3 @@
-
 {
   "name": "cognito-protocol",
   "private": true,
@@ -11,7 +10,7 @@
     "seed-db": "node scripts/seed.js"
   },
   "dependencies": {
-    "@google/genai": "*",
+    "@google/genai": "^0.1.0",
     "lucide-react": "^0.454.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
