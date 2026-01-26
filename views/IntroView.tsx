@@ -106,6 +106,14 @@ export const IntroView: React.FC<IntroViewProps> = ({
 
   const showDebug = isEnvDebug || showDebugOverride;
 
+  // Dynamic font size calculation to keep layout fixed
+  const getDescSizeClass = () => {
+    const len = t.desc.length;
+    if (len > 85) return "text-xs md:text-sm"; // Long (FR, ES)
+    if (len > 50) return "text-sm md:text-base"; // Medium (EN)
+    return "text-base md:text-lg"; // Short (KO, ZH, JA)
+  };
+
   return (
     // REMOVED bg-slate-950 to allow Layout background (stars) to show through.
     // This prevents the visual glitch where the background turns black during swipe-back.
@@ -154,11 +162,19 @@ export const IntroView: React.FC<IntroViewProps> = ({
         <div className="space-y-6 mb-10 max-w-lg select-none w-full">
           <h2 
             onClick={handleSecretTap}
-            className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] tracking-tight leading-tight cursor-default active:scale-95 transition-transform duration-100 min-h-[80px] flex items-center justify-center"
+            // FIXED HEIGHT: h-20 (80px) to prevent layout shift
+            className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] tracking-tight leading-tight cursor-default active:scale-95 transition-transform duration-100 h-20 flex items-center justify-center"
           >
             {t.title}
           </h2>
-          <p className="text-base md:text-lg text-slate-400 leading-relaxed font-medium min-h-[80px] flex items-center justify-center">
+          
+          {/* 
+             FIXED LAYOUT & DYNAMIC TEXT:
+             1. h-20 (80px) fixed height ensures the container doesn't grow/shrink.
+             2. getDescSizeClass() dynamically reduces font size for longer languages (e.g. French) to fit.
+             3. overflow-hidden prevents layout breaking if it somehow exceeds (though font scaling should prevent this).
+          */}
+          <p className={`${getDescSizeClass()} text-slate-400 leading-relaxed font-medium h-20 flex items-center justify-center px-4 overflow-hidden`}>
             {t.desc}
           </p>
         </div>
