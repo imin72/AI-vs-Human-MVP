@@ -6,6 +6,7 @@ import { Share2, RefreshCw, Brain, CheckCircle, CheckCircle2, XCircle, Home, Arr
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, LineChart, Line, Tooltip, AreaChart, Area } from 'recharts';
 import { toPng } from 'html-to-image';
 import { TRANSLATIONS } from '../utils/translations';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 interface StageResultsProps {
   data: EvaluationResult;
@@ -51,6 +52,7 @@ export const StageResults: React.FC<StageResultsProps> = ({
   nextTopicName, 
   language 
 }) => {
+  const { isBackNav } = useAppNavigation();
   // Page 0: Summary, Page 1: Details, Page 2: Trends
   const [currentPage, setCurrentPage] = useState(0); 
   const [chartReady, setChartReady] = useState(false);
@@ -264,7 +266,7 @@ export const StageResults: React.FC<StageResultsProps> = ({
   };
 
   return (
-    <div className="w-full h-full relative flex flex-col animate-fade-in">
+    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Top Controls */}
       <div className="flex justify-between items-center mb-3 shrink-0 z-20 px-4 pt-2">

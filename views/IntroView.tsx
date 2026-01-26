@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Brain, Cpu, ArrowRight, UserCheck, Bug, Eye, Loader, Database } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Language } from '../types';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 interface IntroViewProps {
   t: any;
@@ -74,6 +75,8 @@ export const IntroView: React.FC<IntroViewProps> = ({
   onDebugSeed
 }) => {
   const [hasProfile, setHasProfile] = useState(false);
+  const { isBackNav } = useAppNavigation();
+  
   // Default debug check
   const isEnvDebug = isDebugMode();
   // Manual override state for production
@@ -104,8 +107,10 @@ export const IntroView: React.FC<IntroViewProps> = ({
   const showDebug = isEnvDebug || showDebugOverride;
 
   return (
-    // Added bg-slate-950 to ensure opacity against history snapshots
-    <div className="w-full max-w-2xl relative flex flex-col items-center animate-fade-in h-full bg-slate-950/0">
+    // STRONG FIX: 
+    // 1. bg-slate-950: Ensures opaque background so underlying browser snapshots don't bleed through.
+    // 2. Conditional animate-fade-in: Disables React animation when swiping back to prevent conflict with native browser swipe.
+    <div className={`w-full max-w-2xl relative flex flex-col items-center h-full bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* New Language Selection Header */}
       <div className="w-full flex justify-center gap-3 py-6 z-20 shrink-0">

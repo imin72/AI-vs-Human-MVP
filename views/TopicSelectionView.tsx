@@ -9,6 +9,7 @@ import { Button } from '../components/Button.tsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
 import { Difficulty, TOPIC_IDS, UserProfile, Language } from '../types.ts';
 import { getTierInfo, calculateAggregateElo, getNextTierThreshold } from '../utils/tierUtils';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 interface TopicSelectionViewProps {
   t: any;
@@ -36,7 +37,6 @@ interface TopicSelectionViewProps {
     setCustomTopic: (topic: string) => void;
     editProfile: () => void;
     setLanguage: (lang: Language) => void;
-    // Removed local debug actions from type definition to clean up
   };
 }
 
@@ -63,6 +63,7 @@ const getCategoryIcon = (id: string) => {
 };
 
 export const TopicSelectionView: React.FC<TopicSelectionViewProps> = ({ t, state, actions, language }) => {
+  const { isBackNav } = useAppNavigation();
   const { selectionPhase = 'CATEGORY', selectedCategories, selectedSubTopics, difficulty, displayedTopics, errorMsg, userProfile } = state;
   const isCategoryPhase = selectionPhase === 'CATEGORY';
 
@@ -94,7 +95,7 @@ export const TopicSelectionView: React.FC<TopicSelectionViewProps> = ({ t, state
   const progressPercent = Math.min(100, Math.max(0, ((aggregateElo - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
 
   return (
-    <div className="w-full h-full relative flex flex-col animate-fade-in">
+    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Main Glass Panel */}
       <div className="glass-panel flex flex-col flex-grow h-0 rounded-3xl overflow-hidden shadow-2xl">

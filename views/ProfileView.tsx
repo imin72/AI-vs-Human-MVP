@@ -4,6 +4,7 @@ import { UserCircle2, ChevronRight, Flag, Globe, Home } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { UserProfile, Language } from '../types';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 interface ProfileViewProps {
   t: any;
@@ -43,6 +44,7 @@ const COMMON_COUNTRIES = [
 ].sort();
 
 export const ProfileView: React.FC<ProfileViewProps> = ({ t, userProfile, language, setLanguage, onUpdate, onSubmit, onHome }) => {
+  const { isBackNav } = useAppNavigation();
   const isComplete = userProfile.gender && userProfile.ageGroup && userProfile.nationality;
 
   const regionNames = useMemo(() => {
@@ -65,7 +67,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ t, userProfile, langua
   const btnStyle = "text-white bg-slate-800/80 backdrop-blur-md p-2 rounded-full hover:bg-slate-700 transition-all border border-white/10 shadow-lg";
 
   return (
-    <div className="w-full h-full relative flex flex-col animate-fade-in">
+    <div className={`w-full h-full relative flex flex-col bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Main Glass Panel */}
       <div className="glass-panel flex flex-col flex-grow h-0 rounded-3xl overflow-hidden shadow-2xl">

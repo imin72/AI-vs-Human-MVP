@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { QuizQuestion, Language } from '../types';
 import { TRANSLATIONS } from '../utils/translations';
 import { audioHaptic } from '../services/audioHapticService';
+import { useAppNavigation } from '../hooks/useAppNavigation';
 
 interface QuizViewProps {
   questions: QuizQuestion[];
@@ -32,6 +33,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   batchProgress,
   isSubmitting = false
 }) => {
+  const { isBackNav } = useAppNavigation();
   const question = questions[currentIndex];
   const [aiLogs, setAiLogs] = useState<string[]>([]);
   const [aiComment, setAiComment] = useState("");
@@ -154,7 +156,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   }
 
   return (
-    <div className="flex flex-col w-full h-full animate-fade-in relative">
+    <div className={`flex flex-col w-full h-full relative bg-slate-950 ${isBackNav ? '' : 'animate-fade-in'}`}>
       
       {/* Top Header Row with Batch Progress & Controls */}
       <div className="flex justify-between items-center mb-2 shrink-0 z-20">

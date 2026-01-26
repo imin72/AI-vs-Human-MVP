@@ -7,12 +7,14 @@ interface NavigationContextType {
   setStage: (stage: AppStage) => void;
   goHome: (confirmMsg: string, onConfirmAction?: () => void) => void;
   isNavigatingBackRef: React.MutableRefObject<boolean>;
+  isBackNav: boolean; // New exposed state
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [stage, setStage] = useState<AppStage>(AppStage.INTRO);
+  const [isBackNav, setIsBackNav] = useState(false); // State to trigger re-renders without animation
   const isNavigatingBackRef = useRef(false);
 
   // Initialize history
@@ -22,24 +24,28 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Sync state with history
   useEffect(() => {
-    // If this state change was caused by a popstate event (back button),
-    // do not push/replace history again.
+    // Check if this render is due to a back navigation
     if (isNavigatingBackRef.current) {
+      setIsBackNav(true);
       isNavigatingBackRef.current = false;
+      
+      // Reset back nav flag after a short delay to allow forward navs to animate again
+      // The delay ensures the current render cycle picks up 'true'
+      setTimeout(() => setIsBackNav(false), 500); 
       return;
+    } else {
+      // Normal forward navigation
+      setIsBackNav(false);
     }
 
     // Define stages that should NOT create a new history entry (Transient states)
     const TRANSIENT_STAGES = [AppStage.LOADING_QUIZ, AppStage.ANALYZING];
 
     if (stage === AppStage.INTRO) {
-       // Root state - usually we don't push here to avoid loop
-       // Ensure we are at root state logic if needed, but typically replaceState handled in goHome
+       // Root state
     } else if (TRANSIENT_STAGES.includes(stage)) {
-       // Replace current entry for transient stages
        window.history.replaceState({ stage }, '');
     } else {
-       // Push new entry for stable stages (Profile, Topics, Quiz, Results)
        window.history.pushState({ stage }, '');
     }
   }, [stage]);
@@ -55,8 +61,8 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     
     if (onConfirmAction) onConfirmAction();
     
-    // IMPORTANT: Set flag to prevent useEffect from pushing a new 'INTRO' state on top
-    // We want to reset the stack effectively.
+    // Explicitly handle "Home" as a reset, often similar to back navigation in feel
+    // But we force animation reset here too just in case
     isNavigatingBackRef.current = true;
     setStage(AppStage.INTRO); 
     
@@ -65,7 +71,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [stage]);
 
   return (
-    <NavigationContext.Provider value={{ stage, setStage, goHome, isNavigatingBackRef }}>
+    <NavigationContext.Provider value={{ stage, setStage, goHome, isNavigatingBackRef, isBackNav }}>
       {children}
     </NavigationContext.Provider>
   );
