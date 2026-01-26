@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppStage } from '../types';
 import { audioHaptic } from '../services/audioHapticService';
@@ -19,7 +20,13 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Initialize history
   useEffect(() => {
+    // Ensure we start with a clean state on load
     window.history.replaceState({ stage: 'root' }, '');
+    
+    // Prevent browser scroll restoration causing visual jumps
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
   }, []);
 
   // Sync state with history
@@ -42,11 +49,16 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     const TRANSIENT_STAGES = [AppStage.LOADING_QUIZ, AppStage.ANALYZING];
 
     if (stage === AppStage.INTRO) {
-       // Root state
+       // When hitting Intro, we want to establish it as a stable point
+       // But we manage the 'clearing' logic inside goHome mostly
     } else if (TRANSIENT_STAGES.includes(stage)) {
        window.history.replaceState({ stage }, '');
     } else {
-       window.history.pushState({ stage }, '');
+       // Only push if we are NOT coming from a back nav
+       // (Back navs are handled by the popstate event itself popping the stack)
+       if (!isNavigatingBackRef.current) {
+          window.history.pushState({ stage }, '');
+       }
     }
   }, [stage]);
 
@@ -61,13 +73,17 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     
     if (onConfirmAction) onConfirmAction();
     
-    // Explicitly handle "Home" as a reset, often similar to back navigation in feel
-    // But we force animation reset here too just in case
+    // UX FIX: Treat "Home" as a back navigation visually to prevent "fade-in" flicker
     isNavigatingBackRef.current = true;
+    setIsBackNav(true); 
+    
     setStage(AppStage.INTRO); 
     
-    // Reset history stack to root
+    // HISTORY FIX: Replace the current entry with Root/Intro instead of pushing.
+    // This effectively "resets" the forward history from this point.
     window.history.replaceState({ stage: 'root' }, '', window.location.pathname);
+    
+    setTimeout(() => setIsBackNav(false), 500);
   }, [stage]);
 
   return (

@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AppStage, Language, QuizSet, HistoryItem, EvaluationResult, QuizQuestion } from '../types';
 import { generateQuestionsBatch, evaluateBatchAnswers, BatchEvaluationInput, seedLocalDatabase } from '../services/geminiService';
@@ -343,6 +344,21 @@ export const useGameViewModel = () => {
 
     const confirmHomeMsg = t.common.confirm_home;
 
+    // --- EXIT APP LOGIC FOR INTRO SCREEN ---
+    if (nav.stage === AppStage.INTRO) {
+        if (window.confirm(t.common.confirm_exit_app)) {
+           // User wants to exit. Return false allows the 'popstate' event 
+           // to proceed naturally, taking the user back to the previous page/app.
+           return false; 
+        } else {
+           // User wants to stay. We must push state back to cancel the pop.
+           // Since we are inside the 'popstate' handler, the history has ALREADY popped.
+           // We push it back to restore the Intro view.
+           window.history.pushState({ stage: AppStage.INTRO }, '');
+           return true;
+        }
+    }
+
     switch (nav.stage) {
       case AppStage.TOPIC_SELECTION:
         if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
@@ -354,9 +370,6 @@ export const useGameViewModel = () => {
 
       case AppStage.PROFILE:
         nav.setStage(AppStage.INTRO);
-        return false;
-
-      case AppStage.INTRO:
         return false;
 
       case AppStage.QUIZ:
@@ -394,10 +407,16 @@ export const useGameViewModel = () => {
 
   useEffect(() => {
     const handlePopState = (_: PopStateEvent) => {
+      // NOTE: Popstate fires AFTER the history change.
       nav.isNavigatingBackRef.current = true;
       const handled = performBackNavigation();
       if (handled) {
-         window.history.pushState({ stage: nav.stage }, '');
+         // If we handled it internally (e.g. going back a step within the app),
+         // we need to make sure the history stack reflects where we are.
+         // However, most internal navs in the switch above simply setStage.
+         // The important part is returning 'true' prevents accidental exit if needed
+         // by manually pushing state back (like in Intro check).
+         // For general stages, we let NavigationContext's useEffect handle the state push/replace.
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -408,13 +427,23 @@ export const useGameViewModel = () => {
      if (isPending || quiz.state.isSubmitting) return;
      try { audioHaptic.playClick('soft'); } catch {}
 
+     // Special check for Intro to simulate the same Exit behavior on Swipe
+     if (nav.stage === AppStage.INTRO) {
+        if (window.confirm(t.common.confirm_exit_app)) {
+           // Simulate browser back for exit
+           window.history.back();
+           return;
+        }
+        return;
+     }
+
      if (nav.stage === AppStage.TOPIC_SELECTION && topicMgr.state.selectionPhase === 'SUBTOPIC') {
         topicMgr.actions.backToCategories();
         return;
      }
 
      window.history.back();
-  }, [isPending, quiz.state.isSubmitting, nav.stage, topicMgr.state.selectionPhase, topicMgr.actions]);
+  }, [isPending, quiz.state.isSubmitting, nav.stage, topicMgr.state.selectionPhase, topicMgr.actions, t.common.confirm_exit_app]);
 
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 

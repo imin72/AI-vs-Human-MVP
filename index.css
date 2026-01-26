@@ -11,8 +11,10 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden; /* Prevent scrolling on the document level */
-  overscroll-behavior: none; /* Prevent pull-to-refresh and rubber-banding */
+  overscroll-behavior-y: none; /* Prevent pull-to-refresh and rubber-banding */
   touch-action: pan-x pan-y; /* Optimize touch actions */
+  -webkit-user-select: none; /* Disable text selection to feel more app-like */
+  user-select: none;
 }
 
 body {
