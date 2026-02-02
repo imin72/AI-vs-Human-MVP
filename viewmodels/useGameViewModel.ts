@@ -342,15 +342,19 @@ export const useGameViewModel = () => {
 
   // --- Browser History Integration ---
   const performBackNavigation = useCallback((): boolean => {
-    // If we are already unwinding, keep going until we hit the guard or leave
+    // 1. Unwinding Mode (Recursive Exit)
     if (isExitingRef.current) {
-        if (window.history.state && window.history.state.type === 'EXIT_GUARD') {
-             // We hit the guard, one last step exits the app
-             window.history.back();
-        } else {
-             // We are on some other history entry, keep unwinding
-             window.history.back();
-        }
+        // MOBILE FIX: Use setTimeout to ensure browser state settles before next action.
+        // Rapid fire back() calls can be throttled/ignored by mobile browsers.
+        setTimeout(() => {
+            if (window.history.state && window.history.state.type === 'EXIT_GUARD') {
+                 // We hit the guard, one last step exits the app/tab context
+                 window.history.back();
+            } else {
+                 // We are on some other history entry, keep unwinding
+                 window.history.back();
+            }
+        }, 10);
         return true; 
     }
 
@@ -365,11 +369,8 @@ export const useGameViewModel = () => {
         // We prompt to exit.
         if (window.confirm(t.common.confirm_exit_app)) {
            // USER CONFIRMED EXIT.
-           // Set flag to true.
            isExitingRef.current = true;
-           // Trigger back. This will pop state.
-           // The NEXT popstate event will trigger performBackNavigation again.
-           // Because isExitingRef is true, it will hit the top block and keep going back.
+           // Trigger back to start the unwinding loop via popstate events.
            window.history.back();
            return true; 
         } else {
@@ -403,11 +404,6 @@ export const useGameViewModel = () => {
            setEvaluation(null);
            setSessionResults([]);
            nav.setStage(AppStage.INTRO);
-           // IMPORTANT: If user cancels the quiz to go home, we don't want to double-pop.
-           // Returning false here might mean standard pop behavior if not handled?
-           // Actually NavigationContext handles 'goHome' by Pushing Intro.
-           // But here we are reacting to a pop. So we are ALREADY at the previous state in history.
-           // If we just setStage(Intro), we are visually at Intro, but history is at "Quiz - 1".
            return false;
         }
         // If user cancels confirmation (stays in quiz), we need to push state back
