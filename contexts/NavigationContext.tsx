@@ -20,12 +20,19 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Initialize history
   useEffect(() => {
-    // Ensure we start with a clean state on load
-    window.history.replaceState({ stage: 'root' }, '');
-    
     // Prevent browser scroll restoration causing visual jumps
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
+    }
+
+    // Initialize History Stack for "Exit Guard"
+    // If there is no state (fresh load), we create a guard entry + the intro entry.
+    // This ensures that hitting "Back" from the start will fire a popstate event we can capture.
+    if (!window.history.state || !window.history.state.stage) {
+       // Replace current (blank) with a Guard
+       window.history.replaceState({ type: 'EXIT_GUARD' }, '');
+       // Push the actual App Start
+       window.history.pushState({ stage: AppStage.INTRO }, '');
     }
   }, []);
 
@@ -37,7 +44,6 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
       isNavigatingBackRef.current = false;
       
       // Reset back nav flag after a short delay to allow forward navs to animate again
-      // The delay ensures the current render cycle picks up 'true'
       setTimeout(() => setIsBackNav(false), 500); 
       return;
     } else {
@@ -49,15 +55,17 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     const TRANSIENT_STAGES = [AppStage.LOADING_QUIZ, AppStage.ANALYZING];
 
     if (stage === AppStage.INTRO) {
-       // When hitting Intro, we want to establish it as a stable point
-       // But we manage the 'clearing' logic inside goHome mostly
+       // Intro is handled explicitly in init or goHome
     } else if (TRANSIENT_STAGES.includes(stage)) {
        window.history.replaceState({ stage }, '');
     } else {
        // Only push if we are NOT coming from a back nav
        // (Back navs are handled by the popstate event itself popping the stack)
        if (!isNavigatingBackRef.current) {
-          window.history.pushState({ stage }, '');
+          // Check if we are already at this stage to prevent dupes (optional, but good for safety)
+          if (window.history.state?.stage !== stage) {
+             window.history.pushState({ stage }, '');
+          }
        }
     }
   }, [stage]);
@@ -73,15 +81,19 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     
     if (onConfirmAction) onConfirmAction();
     
-    // UX FIX: Treat "Home" as a back navigation visually to prevent "fade-in" flicker
+    // Treat Home as a "New Start" or Back depending on UX preference.
+    // To satisfy "Reset History" visually, we treat it as a Back nav visual 
+    // but we PUSH state so that 'Back' from Intro triggers our Exit Logic.
     isNavigatingBackRef.current = true;
     setIsBackNav(true); 
     
     setStage(AppStage.INTRO); 
     
-    // HISTORY FIX: Replace the current entry with Root/Intro instead of pushing.
-    // This effectively "resets" the forward history from this point.
-    window.history.replaceState({ stage: 'root' }, '', window.location.pathname);
+    // PUSH INTRO to the top.
+    // This effectively "buries" the previous session.
+    // When user hits "Back", our popstate handler in useGameViewModel will trigger.
+    // It will ask "Exit?", and if Yes, it will recursively rewind this stack.
+    window.history.pushState({ stage: AppStage.INTRO }, '', window.location.pathname);
     
     setTimeout(() => setIsBackNav(false), 500);
   }, [stage]);

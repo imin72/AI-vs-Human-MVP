@@ -347,8 +347,24 @@ export const useGameViewModel = () => {
     // --- EXIT APP LOGIC FOR INTRO SCREEN ---
     if (nav.stage === AppStage.INTRO) {
         if (window.confirm(t.common.confirm_exit_app)) {
+           // USER CONFIRMED EXIT.
+           // The browser history pointer has already moved back by 1 (due to the popstate that triggered this).
+           // We now check what state we landed on.
+           const currentState = window.history.state;
+           
+           // If we landed on an internal app state (e.g. Quiz, Result) or our 'EXIT_GUARD', 
+           // we must trigger another back action to continue "rewinding" the stack.
+           // This effectively clears the forward history from the user's perspective.
+           if (currentState && (currentState.stage || currentState.type === 'EXIT_GUARD')) {
+               window.history.back();
+               return true; // We handled it by navigating again
+           }
+           
+           // If state is null or external, we are successfully out.
            return false; 
         } else {
+           // USER CANCELLED.
+           // Restore the INTRO state so they stay in the app.
            window.history.pushState({ stage: AppStage.INTRO }, '');
            return true;
         }
@@ -419,18 +435,13 @@ export const useGameViewModel = () => {
 
      // Special check for Intro to simulate the same Exit behavior on Swipe
      if (nav.stage === AppStage.INTRO) {
-        if (window.confirm(t.common.confirm_exit_app)) {
-           window.history.back();
-           return;
-        }
+        // Triggering history.back() will fire popstate and run the performBackNavigation logic above
+        window.history.back();
         return;
      }
 
-     // Removed manual internal handling for SUBTOPIC phase.
-     // By calling history.back(), we trigger the popstate event, which calls performBackNavigation.
-     // This ensures consistent behavior with the swipe-back gesture and prevents flash of Intro.
      window.history.back();
-  }, [isPending, quiz.state.isSubmitting, nav.stage, t.common.confirm_exit_app]);
+  }, [isPending, quiz.state.isSubmitting, nav.stage]);
 
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 

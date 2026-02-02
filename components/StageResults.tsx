@@ -133,7 +133,7 @@ export const StageResults: React.FC<StageResultsProps> = ({
   const gap = avgAiScore - avgUserScore;
 
   // 3. Weakness Analysis (Find lowest Elo)
-  const eloRatings = userProfile?.eloRatings || {};
+  const eloRatings = (userProfile?.eloRatings || {}) as Record<string, number>;
   let weakestTopicId = "";
   let lowestElo = 2000;
   Object.entries(eloRatings).forEach(([id, rating]) => {

@@ -1,4 +1,5 @@
-import { useRef, useCallback } from 'react';
+
+import { useRef, useCallback, TouchEvent } from 'react';
 
 interface SwipeConfig {
   onSwipeRight?: () => void;
@@ -22,7 +23,7 @@ export const useSwipeGesture = ({
     (window.navigator as any).standalone === true
   );
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
+  const onTouchStart = useCallback((e: TouchEvent) => {
     // Only track single touch to avoid conflict with pinch-to-zoom
     if (e.targetTouches.length !== 1) return;
     
@@ -41,7 +42,7 @@ export const useSwipeGesture = ({
     };
   }, []);
 
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+  const onTouchEnd = useCallback((e: TouchEvent) => {
     if (!touchStartRef.current) return;
 
     // Use changedTouches for the ended touch
