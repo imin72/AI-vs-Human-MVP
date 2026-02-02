@@ -54,6 +54,9 @@ export const useGameViewModel = () => {
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   // Ref to track if we need to auto-advance when background loading finishes
   const waitingForNextTopicRef = useRef(false);
+
+  // NEW: Ref to track if we are in the process of unwinding the history stack to exit
+  const isExitingRef = useRef(false);
   
   // 2. Composed Hooks
   const nav = useAppNavigation();
@@ -339,6 +342,18 @@ export const useGameViewModel = () => {
 
   // --- Browser History Integration ---
   const performBackNavigation = useCallback((): boolean => {
+    // If we are already unwinding, keep going until we hit the guard or leave
+    if (isExitingRef.current) {
+        if (window.history.state && window.history.state.type === 'EXIT_GUARD') {
+             // We hit the guard, one last step exits the app
+             window.history.back();
+        } else {
+             // We are on some other history entry, keep unwinding
+             window.history.back();
+        }
+        return true; 
+    }
+
     if (isPending || quiz.state.isSubmitting) return false;
     try { audioHaptic.playClick('soft'); } catch {}
 
@@ -346,22 +361,17 @@ export const useGameViewModel = () => {
 
     // --- EXIT APP LOGIC FOR INTRO SCREEN ---
     if (nav.stage === AppStage.INTRO) {
+        // If we hit back on Intro, we are at the "Root" of the visible UI.
+        // We prompt to exit.
         if (window.confirm(t.common.confirm_exit_app)) {
            // USER CONFIRMED EXIT.
-           // The browser history pointer has already moved back by 1 (due to the popstate that triggered this).
-           // We now check what state we landed on.
-           const currentState = window.history.state;
-           
-           // If we landed on an internal app state (e.g. Quiz, Result) or our 'EXIT_GUARD', 
-           // we must trigger another back action to continue "rewinding" the stack.
-           // This effectively clears the forward history from the user's perspective.
-           if (currentState && (currentState.stage || currentState.type === 'EXIT_GUARD')) {
-               window.history.back();
-               return true; // We handled it by navigating again
-           }
-           
-           // If state is null or external, we are successfully out.
-           return false; 
+           // Set flag to true.
+           isExitingRef.current = true;
+           // Trigger back. This will pop state.
+           // The NEXT popstate event will trigger performBackNavigation again.
+           // Because isExitingRef is true, it will hit the top block and keep going back.
+           window.history.back();
+           return true; 
         } else {
            // USER CANCELLED.
            // Restore the INTRO state so they stay in the app.
@@ -393,8 +403,15 @@ export const useGameViewModel = () => {
            setEvaluation(null);
            setSessionResults([]);
            nav.setStage(AppStage.INTRO);
+           // IMPORTANT: If user cancels the quiz to go home, we don't want to double-pop.
+           // Returning false here might mean standard pop behavior if not handled?
+           // Actually NavigationContext handles 'goHome' by Pushing Intro.
+           // But here we are reacting to a pop. So we are ALREADY at the previous state in history.
+           // If we just setStage(Intro), we are visually at Intro, but history is at "Quiz - 1".
            return false;
         }
+        // If user cancels confirmation (stays in quiz), we need to push state back
+        window.history.pushState({ stage: AppStage.QUIZ }, '');
         return true;
 
       case AppStage.RESULTS:
@@ -408,6 +425,7 @@ export const useGameViewModel = () => {
           nav.setStage(AppStage.INTRO);
           return false;
         }
+        window.history.pushState({ stage: nav.stage }, '');
         return true;
 
       default:
@@ -420,10 +438,7 @@ export const useGameViewModel = () => {
     const handlePopState = (_: PopStateEvent) => {
       // NOTE: Popstate fires AFTER the history change.
       nav.isNavigatingBackRef.current = true;
-      const handled = performBackNavigation();
-      if (handled) {
-         // handled internally
-      }
+      performBackNavigation();
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -433,15 +448,9 @@ export const useGameViewModel = () => {
      if (isPending || quiz.state.isSubmitting) return;
      try { audioHaptic.playClick('soft'); } catch {}
 
-     // Special check for Intro to simulate the same Exit behavior on Swipe
-     if (nav.stage === AppStage.INTRO) {
-        // Triggering history.back() will fire popstate and run the performBackNavigation logic above
-        window.history.back();
-        return;
-     }
-
+     // Explicit back call
      window.history.back();
-  }, [isPending, quiz.state.isSubmitting, nav.stage]);
+  }, [isPending, quiz.state.isSubmitting]);
 
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 
@@ -492,6 +501,8 @@ export const useGameViewModel = () => {
         topicMgr.actions.resetSelection();
         setEvaluation(null);
         setSessionResults([]);
+        // Reset Exiting Flag just in case
+        isExitingRef.current = false;
       });
     },
 
