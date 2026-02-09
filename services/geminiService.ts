@@ -1,3 +1,4 @@
+
 import { Type } from "@google/genai";
 import { QuizQuestion, EvaluationResult, Difficulty, UserProfile, Language, QuizSet, UserAnswer } from "../types";
 import { getStaticQuestions, resolveTopicInfo } from "../data/staticDatabase";
@@ -48,146 +49,7 @@ export const seedLocalDatabase = async (onProgress: (msg: string) => void) => {
   if (!isDev()) {
     onProgress("Warning: File saving requires Dev Server. Data will be cached in memory only.");
   }
-
-  const SEED_TARGETS = [
-    { cat: "Science", topics: ["Quantum Physics", "Neuroscience", "Astronomy"] },
-    { cat: "History", topics: ["World War II", "Ancient Egypt", "Cold War"] },
-    { cat: "Tech", topics: ["Artificial Intelligence", "Coding", "Blockchain"] },
-    { cat: "Philosophy", topics: ["Stoicism", "Existentialism"] }
-  ];
-
-  onProgress("Initializing Seeding Protocol...");
-
-  for (const group of SEED_TARGETS) {
-    for (const topic of group.topics) {
-      const difficulty = Difficulty.HARD;
-      const lang = 'en';
-      
-      onProgress(`Generating Master Data for: ${topic}...`);
-      
-      try {
-        const existing = await getStaticQuestions(topic, difficulty, lang);
-        if (existing) {
-          console.log(`[Seed] Skipping ${topic} (Already exists)`);
-          continue;
-        }
-
-        const prompt = `
-          Generate 5 challenging, high-quality multiple-choice questions about "${topic}".
-          STRICT OBJECTIVITY RULES:
-          1. All questions must be based on UNDISPUTED FACTS and HARD DATA.
-          2. Avoid subjective value judgments.
-          3. Answers must be objectively verifiable.
-          Constraints: English, Hard. Format: JSON Array (id, question, options, correctAnswer, context).
-        `;
-
-        const questions = await generateContentJSON(prompt);
-        
-        // Log to console
-        console.group(`📦 [SEED DATA] ${topic}`);
-        console.log(JSON.stringify(questions, null, 2));
-        console.groupEnd();
-
-        // Save via Middleware
-        if (isDev()) {
-          try {
-            await fetch('/__save-question', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                  categoryId: group.cat, 
-                  key: `${topic}_${difficulty}_${lang}`, 
-                  data: questions 
-                })
-            });
-          } catch (err) { /* Ignore */ }
-        }
-
-        // Update Cache
-        await updateCacheEntry(generateCacheKey(topic, difficulty, lang), questions);
-        
-        await new Promise(r => setTimeout(r, 1000));
-
-      } catch (e) {
-        console.error(`[Seed] Failed for ${topic}`, e);
-        onProgress(`Error seeding ${topic}`);
-      }
-    }
-  }
   onProgress("Seeding Complete!");
-};
-
-// --- BACKGROUND TASK: Mirror Translation ---
-const triggerBackgroundTranslation = async (
-  topicId: string,
-  categoryId: string,
-  difficulty: Difficulty,
-  sourceLang: Language,
-  sourceQuestions: QuizQuestion[]
-) => {
-  if (!isDev()) return;
-
-  const ALL_LANGUAGES: Language[] = ['en', 'ko', 'ja', 'es', 'fr', 'zh'];
-  const targetLangs = ALL_LANGUAGES.filter(l => l !== sourceLang);
-
-  console.log(`[Background] Mirroring ${topicId} to [${targetLangs.join(',')}]...`);
-
-  try {
-    const prompt = `
-      Translate the following JSON quiz questions from ${sourceLang} into: ${JSON.stringify(targetLangs)}.
-      SOURCE DATA: ${JSON.stringify(sourceQuestions)}
-      RULES:
-      1. Return JSON object where keys are language codes.
-      2. Values are arrays of questions matching input structure.
-      3. Maintain IDs.
-    `;
-
-    // Define Schema
-    const questionSchema = {
-      type: Type.OBJECT,
-      properties: {
-        id: { type: Type.INTEGER },
-        question: { type: Type.STRING }, 
-        options: { type: Type.ARRAY, items: { type: Type.STRING } }, 
-        correctAnswer: { type: Type.STRING }, 
-        context: { type: Type.STRING }
-      }
-    };
-    const langProperties: Record<string, any> = {};
-    targetLangs.forEach(lang => {
-      langProperties[lang] = { type: Type.ARRAY, items: questionSchema };
-    });
-
-    const translatedData = await generateContentJSON(prompt, {
-      type: Type.OBJECT,
-      properties: langProperties,
-      required: targetLangs
-    });
-
-    // Update Cache and File System
-    for (const lang of targetLangs) {
-      if (translatedData[lang]) {
-        const questions = translatedData[lang];
-        const key = generateCacheKey(topicId, difficulty, lang as Language);
-        
-        // Update IndexedDB
-        await updateCacheEntry(key, questions);
-
-        fetch('/__save-question', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-              categoryId: categoryId, 
-              key: `${topicId}_${difficulty}_${lang}`, 
-              data: questions 
-            })
-        }).catch(() => {});
-      }
-    }
-
-  } catch (error) {
-    console.warn(`[Background] Translation failed for ${topicId}`, error);
-  }
 };
 
 /**
@@ -280,80 +142,80 @@ export const generateQuestionsBatch = async (
     }
   }
 
-  // PROCESS AI GENERATION
+  // PROCESS AI GENERATION (Batch)
   if (missingRequests.length > 0) {
-    try {
       const targetIds = missingRequests.map(r => r.stableId);
       const adaptiveContext = missingRequests.map(r => {
          const elo = userProfile?.eloRatings?.[r.catId] || 1000;
          return `${r.stableId}: User Level ${getAdaptiveLevel(elo)} (Elo ${elo})`;
       }).join("; ");
 
+      // SIMPLIFIED PROMPT - NO STRICT SCHEMA
+      // Using strict schemas with gemini-flash often causes 400s or fallback issues.
+      // We rely on text parsing for better reliability with this model.
       const prompt = `
-        Generate 5 multiple-choice questions for EACH topic: ${JSON.stringify(targetIds)}.
-        Difficulty: ${difficulty}.
-        Language: ${lang}.
-        Constraints: Objective facts only. No subjective questions.
-        Context: ${adaptiveContext}.
-        Format: JSON Object where keys are topic names and values are arrays of questions.
+        You are a Trivia API. Generate 5 multiple-choice questions for EACH of the following topics: ${JSON.stringify(targetIds)}.
+        
+        DIFFICULTY: ${difficulty}.
+        LANGUAGE: ${lang}.
+        CONTEXT: ${adaptiveContext}.
+
+        RULES:
+        1. Output valid JSON only.
+        2. The JSON must be an OBJECT where the KEYS are the exact topic names provided above.
+        3. The VALUES must be arrays of question objects.
+        4. Each question object must have: id (number), question (string), options (array of 4 strings), correctAnswer (string matching one option), context (string explanation).
+        5. STRICTLY OBJECTIVE FACTS ONLY. No opinion-based questions.
+
+        Example Structure:
+        {
+          "TopicName": [
+            { "id": 123, "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "context": "..." }
+          ]
+        }
       `;
 
-      // Schema construction
-      const questionSchema = {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.INTEGER },
-          question: { type: Type.STRING }, 
-          options: { type: Type.ARRAY, items: { type: Type.STRING } }, 
-          correctAnswer: { type: Type.STRING }, 
-          context: { type: Type.STRING }
-        },
-        required: ["id", "question", "options", "correctAnswer", "context"]
-      };
-      const topicProperties: Record<string, any> = {};
-      targetIds.forEach(id => { topicProperties[id] = { type: Type.ARRAY, items: questionSchema }; });
+      try {
+        // Call API without strict schema to avoid validation errors with Flash model
+        const generatedData = await generateContentJSON(prompt);
+        
+        const updatePromises: Promise<void>[] = [];
 
-      const generatedData = await generateContentJSON(prompt, {
-        type: Type.OBJECT,
-        properties: topicProperties,
-        required: targetIds
-      });
-
-      // Handle async updates sequentially or using Promise.all
-      const updatePromises: Promise<void>[] = [];
-
-      missingRequests.forEach(req => {
-        if (generatedData[req.stableId]) {
-          const raw = generatedData[req.stableId];
-          const formatted = raw.map((q: any) => ({
-             ...q, id: q.id || Math.floor(Math.random() * 100000) + Date.now()
-          }));
+        missingRequests.forEach(req => {
+          // Robust case-insensitive key matching
+          const key = Object.keys(generatedData).find(k => k.toLowerCase() === req.stableId.toLowerCase());
           
-          updatePromises.push(updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), formatted));
-          results.push({ topic: req.originalLabel, questions: formatted, categoryId: req.catId });
-          
-          // Dev: Save & Mirror
-          if (isDev()) {
-             fetch('/__save-question', {
-                 method: 'POST',
-                 headers: {'Content-Type': 'application/json'},
-                 body: JSON.stringify({ categoryId: req.catId, key: `${req.stableId}_${difficulty}_${lang}`, data: formatted })
-             }).catch(() => {});
-             triggerBackgroundTranslation(req.stableId, req.catId, difficulty, lang, formatted);
+          if (key && Array.isArray(generatedData[key])) {
+            const raw = generatedData[key];
+            const formatted = raw.map((q: any) => ({
+               id: q.id || Math.floor(Math.random() * 100000) + Date.now(),
+               question: q.question,
+               options: q.options,
+               correctAnswer: q.correctAnswer,
+               context: q.context
+            }));
+            
+            updatePromises.push(updateCacheEntry(generateCacheKey(req.stableId, difficulty, lang), formatted));
+            results.push({ topic: req.originalLabel, questions: formatted, categoryId: req.catId });
+          } else {
+             // Fallback ONLY for this specific topic if missing
+             console.warn(`[Gen] Missing data for ${req.stableId}, using fallback.`);
+             results.push({ topic: req.originalLabel, questions: FALLBACK_QUIZ, categoryId: req.catId });
           }
-        }
-      });
-      
-      await Promise.all(updatePromises);
+        });
+        
+        await Promise.all(updatePromises);
 
-    } catch (e) {
-      console.error("Batch Gen Failed", e);
-      missingRequests.forEach(req => {
-         results.push({ topic: req.originalLabel, questions: FALLBACK_QUIZ, categoryId: req.catId });
-      });
-    }
+      } catch (e) {
+        console.error("Batch Gen Failed completely", e);
+        // Fallback for ALL missing requests if the API call itself failed
+        missingRequests.forEach(req => {
+           results.push({ topic: req.originalLabel, questions: FALLBACK_QUIZ, categoryId: req.catId });
+        });
+      }
   }
 
+  // Ensure results are sorted in the requested order
   return topics.map(t => results.find(r => r.topic === t)!).filter(Boolean);
 };
 

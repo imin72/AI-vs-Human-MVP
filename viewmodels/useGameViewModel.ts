@@ -55,8 +55,9 @@ export const useGameViewModel = () => {
   // Ref to track if we need to auto-advance when background loading finishes
   const waitingForNextTopicRef = useRef(false);
 
-  // NEW: Ref to track if we are in the process of unwinding the history stack to exit
-  const isExitingRef = useRef(false);
+  // NEW: Refs for robust history management
+  const isExitingRef = useRef(false);        // True when user confirmed exit, unwinding to Guard
+  const isUnwindingToHomeRef = useRef(false); // True when user clicked Home, unwinding to Intro
   
   // 2. Composed Hooks
   const nav = useAppNavigation();
@@ -226,13 +227,11 @@ export const useGameViewModel = () => {
            }
         }).catch((err) => {
            console.warn("Background loading failed", err);
-           // We silently fail for background topics, user just plays what we have
         }).finally(() => {
            setIsBackgroundLoading(false);
            // If user was stuck waiting, auto-advance now
            if (waitingForNextTopicRef.current) {
              waitingForNextTopicRef.current = false;
-             // Small delay to smooth transition
              setTimeout(() => {
                 if (quiz.actions.handleNextTopic()) {
                     nav.setStage(AppStage.QUIZ);
@@ -262,9 +261,8 @@ export const useGameViewModel = () => {
       // If failed to move next (queue empty) but background is still loading
       if (isBackgroundLoading) {
         waitingForNextTopicRef.current = true;
-        nav.setStage(AppStage.LOADING_QUIZ); // Show loading screen while waiting
+        nav.setStage(AppStage.LOADING_QUIZ); 
       } else {
-        // Really finished (should have been handled by confirmAnswer, but safe fallback)
         console.warn("Queue empty and no background loading.");
       }
     }
@@ -287,7 +285,7 @@ export const useGameViewModel = () => {
       selectedOption: quiz.state.selectedOption, 
       correctAnswer: question.correctAnswer, 
       isCorrect,
-      context: question.context // Pass context for offline analysis
+      context: question.context 
     };
     
     const updatedAnswers = [...quiz.state.userAnswers, answer];
@@ -316,20 +314,14 @@ export const useGameViewModel = () => {
       const isLastTopic = quiz.state.batchProgress.current >= quiz.state.batchProgress.total;
 
       if (!isLastTopic) {
-         // Auto-advance logic wrapper
          setTimeout(() => {
-             // Check if next topic is ready
              const hasNext = quiz.state.quizQueue.length > 0;
              if (hasNext) {
                  quiz.actions.handleNextTopic();
-                 quiz.actions.setIsSubmitting(false); // Unlock
+                 quiz.actions.setIsSubmitting(false); 
              } else {
-                 // Next topic not ready yet (Background loading...)
-                 // Show Loading Screen and wait
                  waitingForNextTopicRef.current = true;
                  nav.setStage(AppStage.LOADING_QUIZ);
-                 // Note: isSubmitting stays true until next topic loads to prevent double clicks
-                 // It will be reset when handleNextTopic is called in the Finally block
              }
          }, 800);
       } else {
@@ -342,17 +334,34 @@ export const useGameViewModel = () => {
 
   // --- Browser History Integration ---
   const performBackNavigation = useCallback((): boolean => {
-    // 1. Unwinding Mode (Recursive Exit)
+    // 1. UNWIND TO HOME MODE
+    if (isUnwindingToHomeRef.current) {
+        setTimeout(() => {
+           const state = window.history.state;
+           // If we reached the Guard OR the first Intro, we stop
+           // (state.stage === INTRO means we hit the bottom of our stack)
+           if (state && (state.type === 'EXIT_GUARD' || (state.stage === AppStage.INTRO && !state.key))) {
+              isUnwindingToHomeRef.current = false;
+              // Resetting complete. We are now at the root.
+              // Ensure UI is cleanly at Intro
+              nav.setStage(AppStage.INTRO);
+              // Replace current state to be clean Intro
+              window.history.replaceState({ stage: AppStage.INTRO }, '');
+           } else {
+              // Keep going back until we hit bottom
+              window.history.back();
+           }
+        }, 10);
+        return true;
+    }
+
+    // 2. UNWIND TO EXIT MODE
     if (isExitingRef.current) {
-        // MOBILE FIX: Use setTimeout to ensure browser state settles before next action.
-        // Rapid fire back() calls can be throttled/ignored by mobile browsers.
         setTimeout(() => {
             if (window.history.state && window.history.state.type === 'EXIT_GUARD') {
-                 // We hit the guard, one last step exits the app/tab context
-                 window.history.back();
+                 window.history.back(); // Final exit
             } else {
-                 // We are on some other history entry, keep unwinding
-                 window.history.back();
+                 window.history.back(); // Keep unwinding
             }
         }, 10);
         return true; 
@@ -365,22 +374,20 @@ export const useGameViewModel = () => {
 
     // --- EXIT APP LOGIC FOR INTRO SCREEN ---
     if (nav.stage === AppStage.INTRO) {
-        // If we hit back on Intro, we are at the "Root" of the visible UI.
-        // We prompt to exit.
+        // If we hit back on Intro, we check if we should exit
         if (window.confirm(t.common.confirm_exit_app)) {
-           // USER CONFIRMED EXIT.
            isExitingRef.current = true;
-           // Trigger back to start the unwinding loop via popstate events.
            window.history.back();
            return true; 
         } else {
            // USER CANCELLED.
-           // Restore the INTRO state so they stay in the app.
+           // Restore Intro state.
            window.history.pushState({ stage: AppStage.INTRO }, '');
            return true;
         }
     }
 
+    // --- INTERNAL NAVIGATION ---
     switch (nav.stage) {
       case AppStage.TOPIC_SELECTION:
         if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
@@ -396,29 +403,17 @@ export const useGameViewModel = () => {
 
       case AppStage.QUIZ:
         if (window.confirm(confirmHomeMsg)) {
-           setIsPending(false);
-           setIsBackgroundLoading(false);
-           waitingForNextTopicRef.current = false;
-           quiz.actions.resetQuizState();
-           topicMgr.actions.resetSelection();
-           setEvaluation(null);
-           setSessionResults([]);
-           nav.setStage(AppStage.INTRO);
+           handleResetToHome();
            return false;
         }
-        // If user cancels confirmation (stays in quiz), we need to push state back
+        // Cancelled home nav, push state back to stay on page
         window.history.pushState({ stage: AppStage.QUIZ }, '');
         return true;
 
       case AppStage.RESULTS:
       case AppStage.ERROR:
         if (window.confirm(confirmHomeMsg)) {
-          setIsPending(false);
-          quiz.actions.resetQuizState();
-          topicMgr.actions.resetSelection();
-          setEvaluation(null);
-          setSessionResults([]);
-          nav.setStage(AppStage.INTRO);
+          handleResetToHome();
           return false;
         }
         window.history.pushState({ stage: nav.stage }, '');
@@ -428,11 +423,24 @@ export const useGameViewModel = () => {
         nav.setStage(AppStage.INTRO);
         return false;
     }
-  }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, nav, topicMgr.actions, quiz.actions]);
+  }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, nav]);
+
+  const handleResetToHome = useCallback(() => {
+    setIsPending(false);
+    setIsBackgroundLoading(false);
+    waitingForNextTopicRef.current = false;
+    quiz.actions.resetQuizState();
+    topicMgr.actions.resetSelection();
+    setEvaluation(null);
+    setSessionResults([]);
+    
+    // Instead of pushing new state, we trigger the unwind
+    isUnwindingToHomeRef.current = true;
+    window.history.back(); 
+  }, [quiz.actions, topicMgr.actions]);
 
   useEffect(() => {
     const handlePopState = (_: PopStateEvent) => {
-      // NOTE: Popstate fires AFTER the history change.
       nav.isNavigatingBackRef.current = true;
       performBackNavigation();
     };
@@ -443,10 +451,14 @@ export const useGameViewModel = () => {
   const goBack = useCallback(() => {
      if (isPending || quiz.state.isSubmitting) return;
      try { audioHaptic.playClick('soft'); } catch {}
-
-     // Explicit back call
      window.history.back();
   }, [isPending, quiz.state.isSubmitting]);
+
+  const goHomeAction = useCallback(() => {
+     nav.goHome(t.common.confirm_home, () => {
+        handleResetToHome();
+     });
+  }, [nav, t, handleResetToHome]);
 
   const actions = useMemo(() => ({
     setLanguage: (lang: Language) => { 
@@ -477,7 +489,6 @@ export const useGameViewModel = () => {
     selectCategory: topicMgr.actions.selectCategory,
     proceedToSubTopics: () => {
         topicMgr.actions.proceedToSubTopics();
-        // Push a new history entry so swipe-back works correctly without flashing Intro
         window.history.pushState({ stage: AppStage.TOPIC_SELECTION, phase: 'SUBTOPIC' }, '');
     },
     selectSubTopic: topicMgr.actions.selectSubTopic,
@@ -487,20 +498,7 @@ export const useGameViewModel = () => {
     setCustomTopic: (_topic: string) => {},
     
     goBack,
-    
-    goHome: () => {
-      nav.goHome(t.common.confirm_home, () => {
-        setIsPending(false);
-        setIsBackgroundLoading(false);
-        waitingForNextTopicRef.current = false;
-        quiz.actions.resetQuizState();
-        topicMgr.actions.resetSelection();
-        setEvaluation(null);
-        setSessionResults([]);
-        // Reset Exiting Flag just in case
-        isExitingRef.current = false;
-      });
-    },
+    goHome: goHomeAction, // Use the unwinding version
 
     resetApp: () => {
       try { audioHaptic.playClick(); } catch {}
@@ -511,12 +509,8 @@ export const useGameViewModel = () => {
       nav.setStage(AppStage.TOPIC_SELECTION);
     },
 
-    // Swapped original startQuiz with Pipeline version
     startQuiz: startQuizPipeline,
-    
-    // Updated to handle loading wait
     nextTopicInQueue: handleNextTopicInQueue,
-
     selectOption: quiz.actions.selectOption,
     confirmAnswer,
 
@@ -553,7 +547,7 @@ export const useGameViewModel = () => {
         nav.setStage(AppStage.LOADING_QUIZ);
         setTimeout(() => nav.setStage(AppStage.INTRO), 3000);
     },
-  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t, goBack, startQuizPipeline, handleNextTopicInQueue]);
+  }), [language, nav, profile, topicMgr, quiz, isPending, confirmAnswer, t, goBack, startQuizPipeline, handleNextTopicInQueue, goHomeAction]);
 
   const swipeHandlers = useSwipeGesture({
     onSwipeRight: goBack,
