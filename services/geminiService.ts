@@ -1,5 +1,4 @@
 
-import { Type } from "@google/genai";
 import { QuizQuestion, EvaluationResult, Difficulty, UserProfile, Language, QuizSet, UserAnswer } from "../types";
 import { getStaticQuestions, resolveTopicInfo } from "../data/staticDatabase";
 
