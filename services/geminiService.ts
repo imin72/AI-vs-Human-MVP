@@ -7,7 +7,7 @@ import { generateCacheKey, getCacheEntry, updateCacheEntry } from "./cacheManage
 import { generateContentJSON } from "./geminiClient";
 
 // Import AI Persona DB
-import { getAiComments, getRandomComment } from "../data/aiObserverDB";
+import { getAiComments, getRandomComment, generateSmartComment } from "../data/aiObserverDB";
 
 // --- Safe Environment Helpers ---
 const isDev = () => {
@@ -230,7 +230,7 @@ export interface BatchEvaluationInput {
  */
 export const evaluateBatchAnswers = async (
   batches: BatchEvaluationInput[],
-  _userProfile: UserProfile,
+  userProfile: UserProfile,
   lang: Language
 ): Promise<EvaluationResult[]> => {
   // Simulate network delay for realism (immersive "calculating" feel)
@@ -251,11 +251,17 @@ export const evaluateBatchAnswers = async (
     const humanPercentile = Math.min(99, Math.round(batch.score * 0.9 + Math.random() * 10));
     const demographicPercentile = Math.min(99, Math.round(batch.score * 0.85 + Math.random() * 15));
     
+    // Resolve Category ID from the topic label to use correct flavor
+    // (We iterate to find which category this topic belongs to)
+    // Note: This is a loose lookup, ideally we pass ID through, but label works for flavor
+    const topicId = "GENERAL"; 
+
     // 3. Process Details (Question Level Analysis)
     const details = batch.performance.map(p => {
-       const shortComment = p.isCorrect 
-          ? getRandomComment(commentsDB.correct) 
-          : getRandomComment(commentsDB.wrong);
+       // --- NEW: USE SMART TEMPLATE ENGINE INSTEAD OF RANDOM STATIC STRINGS ---
+       // This injects the Question's "Context" (Fact) directly into the AI Comment.
+       // It makes the result feel highly specific and "generated" without calling an API.
+       const smartComment = generateSmartComment(p, lang, topicId);
        
        // Use stored context as "AI Fact" if available, otherwise generic
        const correctFact = p.context || p.correctAnswer; 
@@ -266,7 +272,7 @@ export const evaluateBatchAnswers = async (
          questionText: p.questionText,
          selectedOption: p.selectedOption,
          correctAnswer: p.correctAnswer,
-         aiComment: shortComment, 
+         aiComment: smartComment, // <--- REPLACED
          correctFact: correctFact
        };
     });

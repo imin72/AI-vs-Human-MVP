@@ -1,5 +1,6 @@
+
 import { Layout } from './components/Layout.tsx';
-import { StageResults } from './components/StageResults.tsx';
+import { ResultsView } from './views/ResultsView.tsx'; // Updated Import
 import { AppStage } from './types.ts';
 import { useGameViewModel } from './viewmodels/useGameViewModel.ts';
 
@@ -110,7 +111,7 @@ export default function App() {
       )}
       
       {stage === AppStage.RESULTS && resultState.evaluation && (
-        <StageResults 
+        <ResultsView 
           data={resultState.evaluation}
           sessionResults={resultState.sessionResults}
           userProfile={userProfile}
