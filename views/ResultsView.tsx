@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { EvaluationResult, Language, TOPIC_IDS, UserProfile } from '../types';
 import { Button } from '../components/Button';
 import { Share2, RefreshCw, Brain, CheckCircle, CheckCircle2, XCircle, Home, ArrowRight, Activity, Terminal, History, FlaskConical, Palette, Zap, Map, Film, Music, Gamepad2, Trophy, Cpu, Scroll, Book, Leaf, Utensils, Orbit, Lightbulb, Link as LinkIcon, Download, Twitter, Instagram, TrendingUp, AlertTriangle, MessageCircle, MessageSquare, Timer, Target, Info } from 'lucide-react';
