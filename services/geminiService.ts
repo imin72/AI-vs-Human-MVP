@@ -230,7 +230,7 @@ export interface BatchEvaluationInput {
  */
 export const evaluateBatchAnswers = async (
   batches: BatchEvaluationInput[],
-  userProfile: UserProfile,
+  _userProfile: UserProfile,
   lang: Language
 ): Promise<EvaluationResult[]> => {
   // Simulate network delay for realism (immersive "calculating" feel)
