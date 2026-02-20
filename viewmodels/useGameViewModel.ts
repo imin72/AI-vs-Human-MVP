@@ -54,11 +54,8 @@ export const useGameViewModel = () => {
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   // Ref to track if we need to auto-advance when background loading finishes
   const waitingForNextTopicRef = useRef(false);
+  const isHandlingExitRef = useRef(false);
 
-  // NEW: Refs for robust history management
-  const isExitingRef = useRef(false);        // True when user confirmed exit, unwinding to Guard
-  const isUnwindingToHomeRef = useRef(false); // True when user clicked Home, unwinding to Intro
-  
   // 2. Composed Hooks
   const nav = useAppNavigation();
   const profile = useUserProfile();
@@ -333,97 +330,58 @@ export const useGameViewModel = () => {
   }, [quiz, nav, profile.userProfile, language, isBackgroundLoading]);
 
   // --- Browser History Integration ---
+  const attemptExitApp = useCallback(() => {
+    const inStandalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+
+    // Try to leave current webview/history stack first.
+    window.history.go(-Math.max(1, window.history.length));
+
+    // Fallbacks for mobile installed-webapp contexts.
+    setTimeout(() => {
+      try { window.close(); } catch {}
+      if (inStandalone) {
+        window.location.replace('about:blank');
+      }
+    }, 120);
+
+    // If exit is blocked by the environment/browser, allow retry on next back action.
+    setTimeout(() => {
+      isHandlingExitRef.current = false;
+    }, 1000);
+  }, []);
+
   const performBackNavigation = useCallback((): boolean => {
-    // 1. UNWIND TO HOME MODE
-    if (isUnwindingToHomeRef.current) {
-        setTimeout(() => {
-           const state = window.history.state;
-           // If we reached the Guard OR the first Intro, we stop
-           // (state.stage === INTRO means we hit the bottom of our stack)
-           if (state && (state.type === 'EXIT_GUARD' || (state.stage === AppStage.INTRO && !state.key))) {
-              isUnwindingToHomeRef.current = false;
-              // Resetting complete. We are now at the root.
-              // Ensure UI is cleanly at Intro
-              nav.setStage(AppStage.INTRO);
-              // Replace current state to be clean Intro
-              window.history.replaceState({ stage: AppStage.INTRO }, '');
-           } else {
-              // Keep going back until we hit bottom
-              window.history.back();
-           }
-        }, 10);
-        return true;
-    }
+    const state = window.history.state;
 
-    // 2. UNWIND TO EXIT MODE
-    if (isExitingRef.current) {
-        setTimeout(() => {
-            if (window.history.state && window.history.state.type === 'EXIT_GUARD') {
-                 window.history.back(); // Final exit
-            } else {
-                 window.history.back(); // Keep unwinding
-            }
-        }, 10);
-        return true; 
-    }
+    // Guard/root or Intro root case: ask exit confirmation.
+    const atExitBoundary = state?.type === 'EXIT_GUARD' || (!state && nav.stage === AppStage.INTRO);
+    if (atExitBoundary) {
+      if (isHandlingExitRef.current) return true;
 
-    if (isPending || quiz.state.isSubmitting) return false;
-    try { audioHaptic.playClick('soft'); } catch {}
-
-    const confirmHomeMsg = t.common.confirm_home;
-
-    // --- EXIT APP LOGIC FOR INTRO SCREEN ---
-    if (nav.stage === AppStage.INTRO) {
-        // If we hit back on Intro, we check if we should exit
-        if (window.confirm(t.common.confirm_exit_app)) {
-           isExitingRef.current = true;
-           window.history.back();
-           return true; 
-        } else {
-           // USER CANCELLED.
-           // Restore Intro state.
-           window.history.pushState({ stage: AppStage.INTRO }, '');
-           return true;
-        }
-    }
-
-    // --- INTERNAL NAVIGATION ---
-    switch (nav.stage) {
-      case AppStage.TOPIC_SELECTION:
-        if (topicMgr.state.selectionPhase === 'SUBTOPIC') {
-            topicMgr.actions.backToCategories();
-            return true; 
-        }
-        nav.setStage(AppStage.INTRO); 
-        return false;
-
-      case AppStage.PROFILE:
+      if (window.confirm(t.common.confirm_exit_app)) {
+        isHandlingExitRef.current = true;
+        attemptExitApp();
+      } else {
+        window.history.pushState({ stage: AppStage.INTRO }, '', window.location.pathname);
         nav.setStage(AppStage.INTRO);
-        return false;
-
-      case AppStage.QUIZ:
-        if (window.confirm(confirmHomeMsg)) {
-           handleResetToHome();
-           return false;
-        }
-        // Cancelled home nav, push state back to stay on page
-        window.history.pushState({ stage: AppStage.QUIZ }, '');
-        return true;
-
-      case AppStage.RESULTS:
-      case AppStage.ERROR:
-        if (window.confirm(confirmHomeMsg)) {
-          handleResetToHome();
-          return false;
-        }
-        window.history.pushState({ stage: nav.stage }, '');
-        return true;
-
-      default:
-        nav.setStage(AppStage.INTRO);
-        return false;
+      }
+      return true;
     }
-  }, [nav.stage, topicMgr.state.selectionPhase, isPending, quiz.state.isSubmitting, t, nav]);
+
+    // Restore stage from browser history entry.
+    if (state?.stage) {
+      if (state.stage === AppStage.TOPIC_SELECTION && !state.phase && topicMgr.state.selectionPhase === 'SUBTOPIC') {
+        topicMgr.actions.backToCategories();
+      }
+      nav.setStage(state.stage);
+      return true;
+    }
+
+    // Fallback safety.
+    nav.setStage(AppStage.INTRO);
+    nav.resetHistoryToIntro();
+    return true;
+  }, [attemptExitApp, nav, t.common.confirm_exit_app, topicMgr.actions, topicMgr.state.selectionPhase]);
 
   const handleResetToHome = useCallback(() => {
     setIsPending(false);
@@ -433,11 +391,8 @@ export const useGameViewModel = () => {
     topicMgr.actions.resetSelection();
     setEvaluation(null);
     setSessionResults([]);
-    
-    // Instead of pushing new state, we trigger the unwind
-    isUnwindingToHomeRef.current = true;
-    window.history.back(); 
-  }, [quiz.actions, topicMgr.actions]);
+    nav.setStage(AppStage.INTRO);
+  }, [quiz.actions, topicMgr.actions, nav]);
 
   useEffect(() => {
     const handlePopState = (_: PopStateEvent) => {
@@ -446,7 +401,7 @@ export const useGameViewModel = () => {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [performBackNavigation, nav.stage]);
+  }, [performBackNavigation, nav]);
 
   const goBack = useCallback(() => {
      if (isPending || quiz.state.isSubmitting) return;
@@ -498,7 +453,7 @@ export const useGameViewModel = () => {
     setCustomTopic: (_topic: string) => {},
     
     goBack,
-    goHome: goHomeAction, // Use the unwinding version
+    goHome: goHomeAction,
 
     resetApp: () => {
       try { audioHaptic.playClick(); } catch {}

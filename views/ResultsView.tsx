@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { EvaluationResult, Language, TOPIC_IDS, UserProfile } from '../types';
 import { Button } from '../components/Button';
 import { Share2, RefreshCw, Brain, CheckCircle, CheckCircle2, XCircle, Home, ArrowRight, Activity, Terminal, History, FlaskConical, Palette, Zap, Map, Film, Music, Gamepad2, Trophy, Cpu, Scroll, Book, Leaf, Utensils, Orbit, Lightbulb, Link as LinkIcon, Download, Twitter, Instagram, TrendingUp, AlertTriangle, MessageCircle, MessageSquare, Timer, Target, Info } from 'lucide-react';
@@ -7,7 +7,6 @@ import { ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
 import { toPng } from 'html-to-image';
 import { TRANSLATIONS } from '../utils/translations';
 import { useAppNavigation } from '../hooks/useAppNavigation';
-import { useSwipeGesture } from '../hooks/useSwipeGesture';
 
 interface ResultsViewProps {
   data: EvaluationResult;
@@ -75,12 +74,38 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const resultCount = sessionResults.length;
   const isThreeItems = resultCount === 3;
 
-  const { onTouchStart, onTouchEnd } = useSwipeGesture({
-    onSwipeLeft: () => { if (currentPage < 2) setCurrentPage(p => p + 1); },
-    onSwipeRight: () => { if (currentPage > 0) setCurrentPage(p => p - 1); },
-    edgeOnly: false,
-    threshold: 50
-  });
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.targetTouches.length !== 1) return;
+    const touch = e.targetTouches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() };
+    e.stopPropagation();
+  }, []);
+
+  const onTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!swipeStartRef.current) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - swipeStartRef.current.x;
+    const deltaY = touch.clientY - swipeStartRef.current.y;
+    const duration = Date.now() - swipeStartRef.current.t;
+
+    const isFast = duration < 550;
+    const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY) * 1.4;
+    const isSignificant = Math.abs(deltaX) > 45;
+
+    if (isFast && isHorizontal && isSignificant) {
+      if (deltaX < 0 && currentPage < 2) {
+        setCurrentPage(prev => prev + 1);
+      } else if (deltaX > 0 && currentPage > 0) {
+        setCurrentPage(prev => prev - 1);
+      }
+    }
+
+    swipeStartRef.current = null;
+    e.stopPropagation();
+  }, [currentPage]);
 
   if (!data) return null;
 
@@ -151,6 +176,23 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const hashtags = "AIvsHuman,KnowledgeBattle";
   const shareUrl = window.location.href;
 
+  const captureResultImage = useCallback(async (node: HTMLDivElement) => {
+    const width = node.scrollWidth;
+    const height = node.scrollHeight;
+
+    return toPng(node, {
+      cacheBust: true,
+      backgroundColor: '#020617',
+      width,
+      height,
+      pixelRatio: 2,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`
+      }
+    });
+  }, []);
+
   const performNativeShare = async (platform?: 'twitter' | 'instagram' | 'system') => {
     setIsGeneratingShare(true);
     let targetRef = summaryRef;
@@ -159,7 +201,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     
     try {
       if (targetRef.current) {
-        const blob = await toPng(targetRef.current, { cacheBust: true, backgroundColor: '#020617' })
+        const blob = await captureResultImage(targetRef.current)
           .then(dataUrl => fetch(dataUrl))
           .then(res => res.blob());
         const file = new File([blob], `ai-vs-human-result-${Date.now()}.png`, { type: 'image/png' });
@@ -202,7 +244,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     try {
       for (const target of targets) {
         if (target.ref.current) {
-          const dataUrl = await toPng(target.ref.current, { cacheBust: true, backgroundColor: '#020617' });
+          const dataUrl = await captureResultImage(target.ref.current);
           const link = document.createElement('a');
           link.download = `ai-vs-human-${target.suffix}-${Date.now()}.png`;
           link.href = dataUrl;
