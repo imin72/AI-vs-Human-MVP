@@ -232,7 +232,7 @@ const ENGLISH_BASE: TranslationData = {
       [TOPIC_IDS.MYTHOLOGY]: ["Greek Mythology", "Norse Mythology", "Egyptian Mythology", "Roman Mythology", "Japanese Folklore", "Chinese Mythology", "Celtic Mythology", "Aztec Mythology", "Hindu Mythology", "Native American", "Legendary Monsters", "Epic Heroes", "Underworlds", "Creation Myths", "Gods of War", "Tricksters"],
       [TOPIC_IDS.LITERATURE]: ["Shakespeare", "Classic Novels", "Dystopian Fiction", "Fantasy", "Sci-Fi Books", "Poetry", "Horror", "Mystery", "Comics & Manga", "Nobel Laureates", "Fairy Tales", "Greek Epics", "Russian Literature", "American Literature", "British Literature", "Playwrights"],
       [TOPIC_IDS.NATURE]: ["Mammals", "Birds", "Insects", "Marine Life", "Dinosaurs", "Rain Forests", "Deserts", "Weather", "Flowers", "Trees", "National Parks", "Survival Skills", "Evolution", "Endangered Species", "Fungi", "Gems & Minerals"],
-      [TOPIC_IDS.FOOD]: ["Italian Cuisine", "French Cuisine", "Mexican Food", "Japanese Food", "Chinese Food", "Indian Food", "Desserts", "Wine", "Coffee", "Cheese", "Spices", "Street Food", "Fast Food", "Baking", "Vegan", "Cocktails"],
+      [TOPIC_IDS.FOOD]: ["Italian Cuisine", "French Cuisine", "Mexican Food", "Japanese Food", "Chinese Food", "Indian Food", "Korean Cuisine", "Desserts", "Wine", "Coffee", "High-Protein Meals", "Street Food", "Fast Food", "Baking", "Vegan", "Zero-Proof Drinks"],
       [TOPIC_IDS.SPACE]: ["Solar System", "Black Holes", "Mars", "Moon Landing", "Constellations", "Stars", "Galaxies", "Astronauts", "Space Race", "Telescopes", "Exoplanets", "Gravity", "Rockets", "SETI", "International Space Station", "Big Bang"],
       [TOPIC_IDS.PHILOSOPHY]: ["Ethics", "Logic", "Metaphysics", "Existentialism", "Stoicism", "Nihilism", "Political Philosophy", "Eastern Philosophy", "Ancient Greek", "Enlightenment", "Utilitarianism", "Aesthetics", "Epistemology", "Philosophy of Mind", "Famous Quotes", "Paradoxes"]
     }
@@ -357,7 +357,7 @@ const KO_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.MYTHOLOGY]: ["그리스 신화", "북유럽 신화", "이집트 신화", "로마 신화", "일본 설화", "중국 신화", "켈트 신화", "아즈텍 신화", "힌두 신화", "북미 원주민", "전설의 괴물", "서사시 영웅", "지하 세계", "창세 신화", "전쟁의 신", "트릭스터"],
       [TOPIC_IDS.LITERATURE]: ["셰익스피어", "고전 소설", "디스토피아 소설", "판타지", "SF 도서", "시", "공포", "미스터리", "만화 및 망가", "노벨 문학상", "동화", "그리스 서사시", "러시아 문학", "미국 문학", "영국 문학", "극작가"],
       [TOPIC_IDS.NATURE]: ["포유류", "조류", "곤충", "해양 생물", "공룡", "열대 우림", "사막", "날씨", "꽃", "나무", "국립공원", "생존 기술", "진화", "멸종 위기종", "균류", "보석 및 광물"],
-      [TOPIC_IDS.FOOD]: ["이탈리아 요리", "프랑스 요리", "멕시코 음식", "일본 음식", "중국 음식", "인도 음식", "디저트", "와인", "커피", "치즈", "향신료", "길거리 음식", "패스트 푸드", "베이킹", "비건", "칵테일"],
+      [TOPIC_IDS.FOOD]: ["이탈리아 요리", "프랑스 요리", "멕시코 음식", "일본 음식", "중국 음식", "인도 음식", "한식", "디저트", "와인", "커피", "고단백 식단", "길거리 음식", "패스트 푸드", "베이킹", "비건", "논알코올 음료"],
       [TOPIC_IDS.SPACE]: ["태양계", "블랙홀", "화성", "달 착륙", "별자리", "별", "은하", "우주 비행사", "우주 경쟁", "망원경", "외계 행성", "중력", "로켓", "SETI", "국제 우주 정거장", "빅뱅"],
       [TOPIC_IDS.PHILOSOPHY]: ["윤리학", "논리학", "형이상학", "실존주의", "스토아학파", "허무주의", "정치 철학", "동양 철학", "고대 그리스", "계몽주의", "공리주의", "미학", "인식론", "심리 철학", "유명한 명언", "역설"]
     }
@@ -475,7 +475,7 @@ const JA_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.MYTHOLOGY]: ["ギリシャ神話", "北欧神話", "エジプト神話", "ローマ神話", "日本伝承", "中国神話", "ケルト神話", "アズテック神話", "ヒンドゥー神話", "ネイティブ・アメリカン", "伝説の怪物", "叙事詩の英雄", "冥界", "創世神話", "軍神", "トリックスター"],
       [TOPIC_IDS.LITERATURE]: ["シェイクスピア", "古典小説", "ディストピア小説", "ファンタジー", "SF小説", "詩", "ホラー", "ミステリー", "コミック・漫画", "ノーベル賞作家", "おとぎ話", "ギリシャ叙事詩", "ロシア文学", "アメリカ文学", "イギリス文学", "劇作家"],
       [TOPIC_IDS.NATURE]: ["哺乳類", "鳥類", "昆虫", "海洋生物", "恐竜", "熱帯雨林", "砂漠", "天気", "花", "木々", "国立公園", "生存技術", "進化", "絶滅危惧種", "菌類", "宝石・鉱物"],
-      [TOPIC_IDS.FOOD]: ["イタリア料理", "フランス料理", "メキシコ料理", "日本料理", "中華料理", "インド料理", "デザート", "ワイン", "コーヒー", "チーズ", "スパイス", "ストリートフード", "ファストフード", "ベーキング", "ヴィーガン", "カクテル"],
+      [TOPIC_IDS.FOOD]: ["イタリア料理", "フランス料理", "メキシコ料理", "日本料理", "中華料理", "インド料理", "韓国料理", "デザート", "ワイン", "コーヒー", "高タンパク食", "ストリートフード", "ファストフード", "ベーキング", "ヴィーガン", "ノンアルコールドリンク"],
       [TOPIC_IDS.SPACE]: ["太陽系", "ブラックホール", "火星", "月面着陸", "星座", "星", "銀河", "宇宙飛行士", "宇宙開発競争", "望遠鏡", "系外惑星", "重力", "ロケット", "SETI", "国際宇宙ステーション", "ビッグバン"],
       [TOPIC_IDS.PHILOSOPHY]: ["倫理学", "論理学", "形而上学", "実存主義", "ストア派", "虚無主義", "政治哲学", "東洋哲学", "古代ギリシャ", "啓術主義", "功利主義", "美学", "認識論", "心の哲学", "有名な名言", "パラドックス"]
     }
@@ -713,7 +713,7 @@ const ZH_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.MYTHOLOGY]: ["希腊神话", "北欧神话", "埃及神话", "罗马神话", "日本民间传说", "中国神话", "凯尔特神话", "阿兹特克神话", "印度神话", "美洲原住民", "传奇怪物", "史诗英雄", "冥界", "创世神话", "战神", "恶作剧之神"],
       [TOPIC_IDS.LITERATURE]: ["莎士比亚", "经典小说", "反乌托邦小说", "奇幻", "科幻书籍", "诗歌", "恐怖", "悬疑", "漫画", "诺贝尔奖得主", "童话", "希腊史诗", "俄罗斯文学", "美国文学", "英国文学", "剧作家"],
       [TOPIC_IDS.NATURE]: ["哺乳动物", "鸟类", "昆虫", "海洋生物", "恐龙", "雨林", "沙漠", "天气", "花卉", "树木", "国家公园", "生存技能", "进化论", "濒危物种", "真菌", "宝石与矿物"],
-      [TOPIC_IDS.FOOD]: ["意大利美食", "法国美食", "墨西哥美食", "日本料理", "中国美食", "印度美食", "甜点", "葡萄酒", "咖啡", "奶酪", "香料", "街头小吃", "快餐", "烘焙", "素食", "鸡尾酒"],
+      [TOPIC_IDS.FOOD]: ["意大利美食", "法国美食", "墨西哥美食", "日本料理", "中国美食", "印度美食", "韩国料理", "甜点", "葡萄酒", "咖啡", "高蛋白饮食", "街头小吃", "快餐", "烘焙", "素食", "无酒精饮品"],
       [TOPIC_IDS.SPACE]: ["太阳系", "黑洞", "火星", "登月", "星座", "恒星", "星系", "宇航员", "太空竞赛", "望远镜", "系外行星", "重力", "火箭", "搜寻地外文明", "国际空间站", "大爆炸"],
       [TOPIC_IDS.PHILOSOPHY]: ["伦理学", "逻辑学", "形而上学", "实存主义", "斯多葛学派", "虚无主义", "政治哲学", "东方哲学", "古希腊", "启蒙运动", "功利主义", "美学", "认识论", "心灵哲学", "名言", "悖论"]
     }
