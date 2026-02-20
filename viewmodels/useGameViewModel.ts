@@ -54,6 +54,7 @@ export const useGameViewModel = () => {
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   // Ref to track if we need to auto-advance when background loading finishes
   const waitingForNextTopicRef = useRef(false);
+  const isHandlingExitRef = useRef(false);
 
   // 2. Composed Hooks
   const nav = useAppNavigation();
@@ -329,13 +330,37 @@ export const useGameViewModel = () => {
   }, [quiz, nav, profile.userProfile, language, isBackgroundLoading]);
 
   // --- Browser History Integration ---
+  const attemptExitApp = useCallback(() => {
+    const inStandalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+
+    // Try to leave current webview/history stack first.
+    window.history.go(-Math.max(1, window.history.length));
+
+    // Fallbacks for mobile installed-webapp contexts.
+    setTimeout(() => {
+      try { window.close(); } catch {}
+      if (inStandalone) {
+        window.location.replace('about:blank');
+      }
+    }, 120);
+
+    // If exit is blocked by the environment/browser, allow retry on next back action.
+    setTimeout(() => {
+      isHandlingExitRef.current = false;
+    }, 1000);
+  }, []);
+
   const performBackNavigation = useCallback((): boolean => {
     const state = window.history.state;
 
-    // Root guard reached: only Intro should handle app exit confirmation.
-    if (state?.type === 'EXIT_GUARD') {
+    // Guard/root or Intro root case: ask exit confirmation.
+    const atExitBoundary = state?.type === 'EXIT_GUARD' || (!state && nav.stage === AppStage.INTRO);
+    if (atExitBoundary) {
+      if (isHandlingExitRef.current) return true;
+
       if (window.confirm(t.common.confirm_exit_app)) {
-        window.history.back();
+        isHandlingExitRef.current = true;
+        attemptExitApp();
       } else {
         window.history.pushState({ stage: AppStage.INTRO }, '', window.location.pathname);
         nav.setStage(AppStage.INTRO);
@@ -356,7 +381,7 @@ export const useGameViewModel = () => {
     nav.setStage(AppStage.INTRO);
     nav.resetHistoryToIntro();
     return true;
-  }, [nav, t.common.confirm_exit_app, topicMgr.actions, topicMgr.state.selectionPhase]);
+  }, [attemptExitApp, nav, t.common.confirm_exit_app, topicMgr.actions, topicMgr.state.selectionPhase]);
 
   const handleResetToHome = useCallback(() => {
     setIsPending(false);
