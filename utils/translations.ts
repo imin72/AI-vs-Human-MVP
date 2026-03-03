@@ -220,7 +220,7 @@ const ENGLISH_BASE: TranslationData = {
     subtopicImages: SUBTOPIC_IMAGES,
     subtopics: {
       [TOPIC_IDS.HISTORY]: ["Ancient Egypt", "Roman Empire", "World War II", "Cold War", "Renaissance", "Industrial Revolution", "French Revolution", "American Civil War", "Feudal Japan", "The Vikings", "Aztec Empire", "Mongol Empire", "The Crusades", "Victorian Era", "Prehistoric Era", "Public History"],
-      [TOPIC_IDS.SCIENCE]: ["Quantum Physics", "Genetics", "Organic Chemistry", "Neuroscience", "Botany", "Astronomy", "Geology", "Thermodynamics", "Marine Biology", "Evolution", "Particle Physics", "Bioinformatics", "Paleontology", "Climate Science", "Robotics", "Ecology"],
+      [TOPIC_IDS.SCIENCE]: ["Quantum Physics", "Genetics", "Organic Chemistry", "Neuroscience", "Synthetic Biology", "Astronomy", "Earth Systems", "Energy Systems", "Marine Biology", "Evolution", "Particle Physics", "Bioinformatics", "Planetary Health", "Climate Science", "Robotics", "Ecology"],
       [TOPIC_IDS.ARTS]: ["Impressionism", "Renaissance Art", "AI Art & Prompt Design", "Surrealism", "Digital Illustration", "Modernism", "Sculpture", "Graphic Design", "Fashion Core Trends", "Mobile Content Creation", "Street & Public Art", "Immersive Art Experiences", "Abstract Expressionism", "Ceramics Revival", "Modern Calligraphy", "Gothic Architecture"],
       [TOPIC_IDS.GENERAL]: ["AI Regulation", "Creator Economy", "Inventions", "World Capitals", "Currencies", "Nobel Prizes", "Phobias", "Brand Logos", "Cryptocurrency", "Viral Trends", "Board Games", "Card Games", "Superheroes", "Digital Wellbeing", "Personal AI Assistants", "EV Brands"],
       [TOPIC_IDS.GEOGRAPHY]: ["Capitals", "Landmarks", "Mountains", "Rivers", "Deserts", "Islands", "Volcanoes", "Flags", "Population Stats", "Climate Zones", "Oceans", "US States", "European Countries", "Megacities", "African Nations", "Geopolitical Hotspots"],
@@ -345,7 +345,7 @@ const KO_TRANSLATIONS: TranslationData = {
     },
     subtopics: {
       [TOPIC_IDS.HISTORY]: ["고대 이집트", "로마 제국", "제2차 세계대전", "냉전", "르네상스", "산업 혁명", "프랑스 혁명", "미국 내전", "봉건 일본", "바이킹", "아즈텍 제국", "몽골 제국", "십자군", "빅토리아 시대", "선사 시대", "공공 역사"],
-      [TOPIC_IDS.SCIENCE]: ["양자 역학", "유전학", "유기 화학", "신경 과학", "식물학", "천문학", "지질학", "열역학", "해양 생물학", "진화론", "입자 물리학", "생물정보학", "고생물학", "기후 과학", "로봇 공학", "생태학"],
+      [TOPIC_IDS.SCIENCE]: ["양자 역학", "유전학", "유기 화학", "신경 과학", "합성생물학", "천문학", "지구 시스템", "에너지 시스템", "해양 생물학", "진화론", "입자 물리학", "생물정보학", "행성 건강", "기후 과학", "로봇 공학", "생태학"],
       [TOPIC_IDS.ARTS]: ["인상주의", "르네상스 예술", "AI 아트 & 프롬프트 디자인", "초현실주의", "디지털 일러스트레이션", "모더니즘", "조각", "그래픽 디자인", "패션 코어 트렌드", "모바일 콘텐츠 제작", "스트리트 & 공공 미술", "몰입형 아트 경험", "추상 표현주의", "세라믹 리바이벌", "모던 캘리그래피", "고딕 건축"],
       [TOPIC_IDS.GENERAL]: ["AI 규제", "크리에이터 이코노미", "발명품", "세계 수도", "통화", "노벨상", "공포증", "브랜드 로고", "암호화폐", "바이럴 트렌드", "보드 게임", "카드 게임", "슈퍼히어로", "디지털 웰빙", "개인형 AI 어시스턴트", "EV 브랜드"],
       [TOPIC_IDS.GEOGRAPHY]: ["수도", "랜드마크", "산맥", "강", "사막", "섬", "화산", "국기", "인구 통계", "기후대", "대양", "미국 주", "유럽 국가", "메가시티", "아프리카 국가", "지정학적 핫스팟"],
@@ -463,7 +463,7 @@ const JA_TRANSLATIONS: TranslationData = {
     },
     subtopics: {
       [TOPIC_IDS.HISTORY]: ["古代エジプト", "ローマ帝国", "第二次世界大戦", "冷戦", "ルネサンス", "産業革命", "フランス革命", "アメリカ南北戦争", "封建時代の日本", "バイキング", "アズテック帝国", "モンゴル帝国", "十字軍", "ビクトリア朝", "先史時代", "パブリックヒストリー"],
-      [TOPIC_IDS.SCIENCE]: ["量子力学", "遺伝学", "有機化学", "神経科学", "植物学", "天文学", "地質学", "熱力学", "海洋生物学", "進化論", "素粒子物理学", "バイオインフォマティクス", "古生物学", "気候科学", "ロボット工学", "生態学"],
+      [TOPIC_IDS.SCIENCE]: ["量子力学", "遺伝学", "有機化学", "神経科学", "合成生物学", "天文学", "地球システム", "エネルギーシステム", "海洋生物学", "進化論", "素粒子物理学", "バイオインフォマティクス", "プラネタリーヘルス", "気候科学", "ロボット工学", "生態学"],
       [TOPIC_IDS.ARTS]: ["印象派", "ルネサンス美術", "AIアート＆プロンプトデザイン", "シュルレアリスム", "デジタルイラスト", "モダニズム", "彫刻", "グラフィックデザイン", "ファッションコアトレンド", "モバイルコンテンツ制作", "ストリート＆パブリックアート", "没入型アート体験", "抽象表現主義", "セラミックリバイバル", "モダンカリグラフィー", "ゴシック建築"],
       [TOPIC_IDS.GENERAL]: ["AI規制", "クリエイターエコノミー", "発明", "世界の首都", "通貨", "ノーベル賞", "恐怖症", "ブランドロゴ", "暗号資産", "バイラルトレンド", "ボードゲーム", "カードゲーム", "スーパーヒーロー", "デジタルウェルビーイング", "パーソナルAIアシスタント", "EVブランド"],
       [TOPIC_IDS.GEOGRAPHY]: ["首都", "ランドマーク", "山脈", "川", "砂漠", "島", "火山", "国旗", "人口統計", "気候帯", "海洋", "米国の州", "欧州の国々", "メガシティ", "アフリカの諸国", "地政学ホットスポット"],
@@ -701,7 +701,7 @@ const ZH_TRANSLATIONS: TranslationData = {
     },
     subtopics: {
       [TOPIC_IDS.HISTORY]: ["古埃及", "罗马帝国", "第二次世界大战", "冷战", "文艺复兴", "工业革命", "法国大革命", "美国内战", "封建日本", "维京人", "阿兹特克帝国", "蒙古帝国", "十字军东征", "维多利亚时代", "史前时代", "公共史学"],
-      [TOPIC_IDS.SCIENCE]: ["量子物理", "遗传学", "有机化学", "神经科学", "植物学", "天文学", "地质学", "热力学", "海洋生物学", "进化论", "粒子物理学", "生物信息学", "古生物学", "气候科学", "机器人学", "生态学"],
+      [TOPIC_IDS.SCIENCE]: ["量子物理", "遗传学", "有机化学", "神经科学", "合成生物学", "天文学", "地球系统", "能源系统", "海洋生物学", "进化论", "粒子物理学", "生物信息学", "行星健康", "气候科学", "机器人学", "生态学"],
       [TOPIC_IDS.ARTS]: ["印象派", "文艺复兴艺术", "AI 艺术与提示词设计", "超现实主义", "数字插画", "现代主义", "雕塑", "平面设计", "时尚核心趋势", "移动内容创作", "街头与公共艺术", "沉浸式艺术体验", "抽象表现主义", "陶瓷复兴", "现代书法", "哥特式建筑"],
       [TOPIC_IDS.GENERAL]: ["AI 监管", "创作者经济", "发明", "世界首都", "货币", "诺贝尔奖", "恐惧症", "品牌标志", "加密货币", "病毒式趋势", "棋盘游戏", "纸牌游戏", "超级英雄", "数字健康", "个人 AI 助手", "EV 品牌"],
       [TOPIC_IDS.GEOGRAPHY]: ["首都", "地标", "山脉", "河流", "沙漠", "岛屿", "火山", "国旗", "人口统计", "气候带", "海洋", "美国各州", "欧洲国家", "超级城市", "非洲国家", "地缘热点"],
