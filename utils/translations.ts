@@ -234,7 +234,7 @@ const ENGLISH_BASE: TranslationData = {
       [TOPIC_IDS.NATURE]: ["Mammals", "Birds", "Insects", "Marine Life", "Rewilding", "Rain Forests", "Deserts", "Extreme Weather", "Pollinator Gardens", "Urban Biodiversity", "National Parks", "Survival Skills", "Climate Adaptation", "Endangered Species", "Fungi & Mycelium", "Blue Carbon Ecosystems"],
       [TOPIC_IDS.FOOD]: ["Italian Cuisine", "French Cuisine", "Mexican Food", "Japanese Food", "Chinese Food", "Indian Food", "Korean Cuisine", "Desserts", "Natural Wine", "Specialty Coffee", "High-Protein Meals", "Street Food", "Fast Food", "Artisan Baking", "Vegan", "Zero-Proof Drinks"],
       [TOPIC_IDS.SPACE]: ["Solar System", "Black Holes", "Mars", "Moon Landing", "Constellations", "Stars", "Galaxies", "Astronauts", "Space Race", "Telescopes", "Exoplanets", "Gravity", "Rockets", "Commercial Spaceflight", "International Space Station", "Big Bang"],
-      [TOPIC_IDS.PHILOSOPHY]: ["Ethics", "Logic", "Metaphysics", "Existentialism", "Stoicism", "Nihilism", "Political Philosophy", "Eastern Philosophy", "Ancient Greek", "Enlightenment", "Utilitarianism", "Aesthetics", "Epistemology", "Philosophy of Mind", "AI Ethics", "Paradoxes"]
+      [TOPIC_IDS.PHILOSOPHY]: ["Ethics", "Logic", "Metaphysics", "Existentialism", "Stoicism", "Nihilism", "Political Philosophy", "Eastern Philosophy", "Philosophy of Technology", "Consciousness Studies", "Utilitarianism", "Aesthetics", "Epistemology", "Philosophy of AI Alignment", "Digital Ethics", "Paradoxes"]
     }
   },
   quiz: { 
@@ -359,7 +359,7 @@ const KO_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.NATURE]: ["포유류", "조류", "곤충", "해양 생물", "리와일딩", "열대 우림", "사막", "극한 기상", "수분매개 정원", "도시 생물다양성", "국립공원", "생존 기술", "기후 적응", "멸종 위기종", "균류 & 균사체", "블루 카본 생태계"],
       [TOPIC_IDS.FOOD]: ["이탈리아 요리", "프랑스 요리", "멕시코 음식", "일본 음식", "중국 음식", "인도 음식", "한식", "디저트", "내추럴 와인", "스페셜티 커피", "고단백 식단", "길거리 음식", "패스트 푸드", "아티장 베이킹", "비건", "논알코올 음료"],
       [TOPIC_IDS.SPACE]: ["태양계", "블랙홀", "화성", "달 착륙", "별자리", "별", "은하", "우주 비행사", "우주 경쟁", "망원경", "외계 행성", "중력", "로켓", "상업 우주비행", "국제 우주 정거장", "빅뱅"],
-      [TOPIC_IDS.PHILOSOPHY]: ["윤리학", "논리학", "형이상학", "실존주의", "스토아학파", "허무주의", "정치 철학", "동양 철학", "고대 그리스", "계몽주의", "공리주의", "미학", "인식론", "심리 철학", "AI 윤리", "역설"]
+      [TOPIC_IDS.PHILOSOPHY]: ["윤리학", "논리학", "형이상학", "실존주의", "스토아학파", "허무주의", "정치 철학", "동양 철학", "기술 철학", "의식 연구", "공리주의", "미학", "인식론", "AI 정렬 철학", "디지털 윤리", "역설"]
     }
   },
   quiz: { 
@@ -477,7 +477,7 @@ const JA_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.NATURE]: ["哺乳類", "鳥類", "昆虫", "海洋生物", "リワイルディング", "熱帯雨林", "砂漠", "異常気象", "ポリネーターガーデン", "都市生物多様性", "国立公園", "生存技術", "気候適応", "絶滅危惧種", "菌類＆菌糸体", "ブルーカーボン生態系"],
       [TOPIC_IDS.FOOD]: ["イタリア料理", "フランス料理", "メキシコ料理", "日本料理", "中華料理", "インド料理", "韓国料理", "デザート", "ナチュラルワイン", "スペシャルティコーヒー", "高タンパク食", "ストリートフード", "ファストフード", "アーティザンベーキング", "ヴィーガン", "ノンアルコールドリンク"],
       [TOPIC_IDS.SPACE]: ["太陽系", "ブラックホール", "火星", "月面着陸", "星座", "星", "銀河", "宇宙飛行士", "宇宙開発競争", "望遠鏡", "系外惑星", "重力", "ロケット", "商業宇宙飛行", "国際宇宙ステーション", "ビッグバン"],
-      [TOPIC_IDS.PHILOSOPHY]: ["倫理学", "論理学", "形而上学", "実存主義", "ストア派", "虚無主義", "政治哲学", "東洋哲学", "古代ギリシャ", "啓術主義", "功利主義", "美学", "認識論", "心の哲学", "AI倫理", "パラドックス"]
+      [TOPIC_IDS.PHILOSOPHY]: ["倫理学", "論理学", "形而上学", "実存主義", "ストア派", "虚無主義", "政治哲学", "東洋哲学", "技術哲学", "意識研究", "功利主義", "美学", "認識論", "AIアライメント哲学", "デジタル倫理", "パラドックス"]
     }
   },
   quiz: { 
@@ -715,7 +715,7 @@ const ZH_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.NATURE]: ["哺乳动物", "鸟类", "昆虫", "海洋生物", "生态复野", "雨林", "沙漠", "极端天气", "传粉花园", "城市生物多样性", "国家公园", "生存技能", "气候适应", "濒危物种", "真菌与菌丝体", "蓝碳生态系统"],
       [TOPIC_IDS.FOOD]: ["意大利美食", "法国美食", "墨西哥美食", "日本料理", "中国美食", "印度美食", "韩国料理", "甜点", "自然酒", "精品咖啡", "高蛋白饮食", "街头小吃", "快餐", "手工烘焙", "素食", "无酒精饮品"],
       [TOPIC_IDS.SPACE]: ["太阳系", "黑洞", "火星", "登月", "星座", "恒星", "星系", "宇航员", "太空竞赛", "望远镜", "系外行星", "重力", "火箭", "商业航天", "国际空间站", "大爆炸"],
-      [TOPIC_IDS.PHILOSOPHY]: ["伦理学", "逻辑学", "形而上学", "实存主义", "斯多葛学派", "虚无主义", "政治哲学", "东方哲学", "古希腊", "启蒙运动", "功利主义", "美学", "认识论", "心灵哲学", "AI 伦理", "悖论"]
+      [TOPIC_IDS.PHILOSOPHY]: ["伦理学", "逻辑学", "形而上学", "实存主义", "斯多葛学派", "虚无主义", "政治哲学", "东方哲学", "技术哲学", "意识研究", "功利主义", "美学", "认识论", "AI 对齐哲学", "数字伦理", "悖论"]
     }
   },
   quiz: { 
