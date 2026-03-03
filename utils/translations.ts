@@ -219,7 +219,7 @@ const ENGLISH_BASE: TranslationData = {
     categoryImages: CATEGORY_IMAGES,
     subtopicImages: SUBTOPIC_IMAGES,
     subtopics: {
-      [TOPIC_IDS.HISTORY]: ["Ancient Egypt", "Roman Empire", "World War II", "Cold War", "Renaissance", "Industrial Revolution", "French Revolution", "American Civil War", "Feudal Japan", "The Vikings", "Aztec Empire", "Mongol Empire", "The Crusades", "Victorian Era", "Prehistoric Era", "Digital History"],
+      [TOPIC_IDS.HISTORY]: ["Ancient Egypt", "Roman Empire", "World War II", "Cold War", "Renaissance", "Industrial Revolution", "French Revolution", "American Civil War", "Feudal Japan", "The Vikings", "Aztec Empire", "Mongol Empire", "The Crusades", "Victorian Era", "Prehistoric Era", "Public History"],
       [TOPIC_IDS.SCIENCE]: ["Quantum Physics", "Genetics", "Organic Chemistry", "Neuroscience", "Botany", "Astronomy", "Geology", "Thermodynamics", "Marine Biology", "Evolution", "Particle Physics", "Bioinformatics", "Paleontology", "Climate Science", "Robotics", "Ecology"],
       [TOPIC_IDS.ARTS]: ["Impressionism", "Renaissance Art", "AI Art & Prompt Design", "Surrealism", "Digital Illustration", "Modernism", "Sculpture", "Graphic Design", "Fashion Core Trends", "Mobile Content Creation", "Street & Public Art", "Immersive Art Experiences", "Abstract Expressionism", "Ceramics Revival", "Modern Calligraphy", "Gothic Architecture"],
       [TOPIC_IDS.GENERAL]: ["AI Regulation", "Creator Economy", "Inventions", "World Capitals", "Currencies", "Nobel Prizes", "Phobias", "Brand Logos", "Cryptocurrency", "Viral Trends", "Board Games", "Card Games", "Superheroes", "Digital Wellbeing", "Personal AI Assistants", "EV Brands"],
@@ -344,7 +344,7 @@ const KO_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.HISTORY]: "역사", [TOPIC_IDS.SCIENCE]: "과학", [TOPIC_IDS.ARTS]: "예술", [TOPIC_IDS.GENERAL]: "일반 상식", [TOPIC_IDS.GEOGRAPHY]: "지리", [TOPIC_IDS.MOVIES]: "영화", [TOPIC_IDS.MUSIC]: "음악", [TOPIC_IDS.GAMING]: "게임", [TOPIC_IDS.SPORTS]: "스포츠", [TOPIC_IDS.TECH]: "기술", [TOPIC_IDS.MYTHOLOGY]: "신화", [TOPIC_IDS.LITERATURE]: "문학", [TOPIC_IDS.NATURE]: "자연", [TOPIC_IDS.FOOD]: "음식", [TOPIC_IDS.SPACE]: "우주", [TOPIC_IDS.PHILOSOPHY]: "철학"
     },
     subtopics: {
-      [TOPIC_IDS.HISTORY]: ["고대 이집트", "로마 제국", "제2차 세계대전", "냉전", "르네상스", "산업 혁명", "프랑스 혁명", "미국 내전", "봉건 일본", "바이킹", "아즈텍 제국", "몽골 제국", "십자군", "빅토리아 시대", "선사 시대", "디지털 역사"],
+      [TOPIC_IDS.HISTORY]: ["고대 이집트", "로마 제국", "제2차 세계대전", "냉전", "르네상스", "산업 혁명", "프랑스 혁명", "미국 내전", "봉건 일본", "바이킹", "아즈텍 제국", "몽골 제국", "십자군", "빅토리아 시대", "선사 시대", "공공 역사"],
       [TOPIC_IDS.SCIENCE]: ["양자 역학", "유전학", "유기 화학", "신경 과학", "식물학", "천문학", "지질학", "열역학", "해양 생물학", "진화론", "입자 물리학", "생물정보학", "고생물학", "기후 과학", "로봇 공학", "생태학"],
       [TOPIC_IDS.ARTS]: ["인상주의", "르네상스 예술", "AI 아트 & 프롬프트 디자인", "초현실주의", "디지털 일러스트레이션", "모더니즘", "조각", "그래픽 디자인", "패션 코어 트렌드", "모바일 콘텐츠 제작", "스트리트 & 공공 미술", "몰입형 아트 경험", "추상 표현주의", "세라믹 리바이벌", "모던 캘리그래피", "고딕 건축"],
       [TOPIC_IDS.GENERAL]: ["AI 규제", "크리에이터 이코노미", "발명품", "세계 수도", "통화", "노벨상", "공포증", "브랜드 로고", "암호화폐", "바이럴 트렌드", "보드 게임", "카드 게임", "슈퍼히어로", "디지털 웰빙", "개인형 AI 어시스턴트", "EV 브랜드"],
@@ -462,7 +462,7 @@ const JA_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.HISTORY]: "歴史", [TOPIC_IDS.SCIENCE]: "科学", [TOPIC_IDS.ARTS]: "芸術", [TOPIC_IDS.GENERAL]: "一般常識", [TOPIC_IDS.GEOGRAPHY]: "地理", [TOPIC_IDS.MOVIES]: "映画", [TOPIC_IDS.MUSIC]: "音楽", [TOPIC_IDS.GAMING]: "ゲーム", [TOPIC_IDS.SPORTS]: "スポーツ", [TOPIC_IDS.TECH]: "テクノロジー", [TOPIC_IDS.MYTHOLOGY]: "神話", [TOPIC_IDS.LITERATURE]: "文学", [TOPIC_IDS.NATURE]: "自然", [TOPIC_IDS.FOOD]: "料理", [TOPIC_IDS.SPACE]: "宇宙", [TOPIC_IDS.PHILOSOPHY]: "哲学"
     },
     subtopics: {
-      [TOPIC_IDS.HISTORY]: ["古代エジプト", "ローマ帝国", "第二次世界大戦", "冷戦", "ルネサンス", "産業革命", "フランス革命", "アメリカ南北戦争", "封建時代の日本", "バイキング", "アズテック帝国", "モンゴル帝国", "十字軍", "ビクトリア朝", "先史時代", "デジタルヒストリー"],
+      [TOPIC_IDS.HISTORY]: ["古代エジプト", "ローマ帝国", "第二次世界大戦", "冷戦", "ルネサンス", "産業革命", "フランス革命", "アメリカ南北戦争", "封建時代の日本", "バイキング", "アズテック帝国", "モンゴル帝国", "十字軍", "ビクトリア朝", "先史時代", "パブリックヒストリー"],
       [TOPIC_IDS.SCIENCE]: ["量子力学", "遺伝学", "有機化学", "神経科学", "植物学", "天文学", "地質学", "熱力学", "海洋生物学", "進化論", "素粒子物理学", "バイオインフォマティクス", "古生物学", "気候科学", "ロボット工学", "生態学"],
       [TOPIC_IDS.ARTS]: ["印象派", "ルネサンス美術", "AIアート＆プロンプトデザイン", "シュルレアリスム", "デジタルイラスト", "モダニズム", "彫刻", "グラフィックデザイン", "ファッションコアトレンド", "モバイルコンテンツ制作", "ストリート＆パブリックアート", "没入型アート体験", "抽象表現主義", "セラミックリバイバル", "モダンカリグラフィー", "ゴシック建築"],
       [TOPIC_IDS.GENERAL]: ["AI規制", "クリエイターエコノミー", "発明", "世界の首都", "通貨", "ノーベル賞", "恐怖症", "ブランドロゴ", "暗号資産", "バイラルトレンド", "ボードゲーム", "カードゲーム", "スーパーヒーロー", "デジタルウェルビーイング", "パーソナルAIアシスタント", "EVブランド"],
@@ -700,7 +700,7 @@ const ZH_TRANSLATIONS: TranslationData = {
       [TOPIC_IDS.HISTORY]: "历史", [TOPIC_IDS.SCIENCE]: "科学", [TOPIC_IDS.ARTS]: "艺术", [TOPIC_IDS.GENERAL]: "通识", [TOPIC_IDS.GEOGRAPHY]: "地理", [TOPIC_IDS.MOVIES]: "电影", [TOPIC_IDS.MUSIC]: "音乐", [TOPIC_IDS.GAMING]: "游戏", [TOPIC_IDS.SPORTS]: "体育", [TOPIC_IDS.TECH]: "科技", [TOPIC_IDS.MYTHOLOGY]: "神话", [TOPIC_IDS.LITERATURE]: "文学", [TOPIC_IDS.NATURE]: "自然", [TOPIC_IDS.FOOD]: "美食", [TOPIC_IDS.SPACE]: "太空", [TOPIC_IDS.PHILOSOPHY]: "哲学"
     },
     subtopics: {
-      [TOPIC_IDS.HISTORY]: ["古埃及", "罗马帝国", "第二次世界大战", "冷战", "文艺复兴", "工业革命", "法国大革命", "美国内战", "封建日本", "维京人", "阿兹特克帝国", "蒙古帝国", "十字军东征", "维多利亚时代", "史前时代", "数字史学"],
+      [TOPIC_IDS.HISTORY]: ["古埃及", "罗马帝国", "第二次世界大战", "冷战", "文艺复兴", "工业革命", "法国大革命", "美国内战", "封建日本", "维京人", "阿兹特克帝国", "蒙古帝国", "十字军东征", "维多利亚时代", "史前时代", "公共史学"],
       [TOPIC_IDS.SCIENCE]: ["量子物理", "遗传学", "有机化学", "神经科学", "植物学", "天文学", "地质学", "热力学", "海洋生物学", "进化论", "粒子物理学", "生物信息学", "古生物学", "气候科学", "机器人学", "生态学"],
       [TOPIC_IDS.ARTS]: ["印象派", "文艺复兴艺术", "AI 艺术与提示词设计", "超现实主义", "数字插画", "现代主义", "雕塑", "平面设计", "时尚核心趋势", "移动内容创作", "街头与公共艺术", "沉浸式艺术体验", "抽象表现主义", "陶瓷复兴", "现代书法", "哥特式建筑"],
       [TOPIC_IDS.GENERAL]: ["AI 监管", "创作者经济", "发明", "世界首都", "货币", "诺贝尔奖", "恐惧症", "品牌标志", "加密货币", "病毒式趋势", "棋盘游戏", "纸牌游戏", "超级英雄", "数字健康", "个人 AI 助手", "EV 品牌"],
