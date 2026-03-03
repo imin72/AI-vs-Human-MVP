@@ -103,7 +103,7 @@ export const generateQuestionsBatch = async (
 
     // 3. Master Data Translation Check (English -> Target Lang)
     if (lang !== 'en') {
-      const masterData = await getStaticQuestions(req.originalLabel, difficulty, 'en');
+      const masterData = await getStaticQuestions(req.stableId, difficulty, 'en');
       if (masterData && masterData.length > 0) {
         translationRequests.push({ req, sourceData: masterData });
         continue;
