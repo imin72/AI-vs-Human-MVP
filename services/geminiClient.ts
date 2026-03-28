@@ -1,6 +1,8 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 const MODEL_NAME = 'gemini-3-flash-preview';
+let aiClient: GoogleGenAI | null = null;
+const inFlightRequests = new Map<string, Promise<any>>();
 
 /**
  * Helper to retrieve API Key safely.
@@ -18,8 +20,11 @@ export const getApiKey = () => {
  * Lazy initialization of the Gemini Client.
  */
 export const getAiClient = () => {
-  const apiKey = getApiKey();
-  return new GoogleGenAI({ apiKey });
+  if (!aiClient) {
+    const apiKey = getApiKey();
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
 };
 
 /**
@@ -53,6 +58,12 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 1, delay = 20
  */
 export const generateContentJSON = async (prompt: string, schema?: any): Promise<any> => {
   const ai = getAiClient();
+  const requestKey = `${MODEL_NAME}::${prompt}::${schema ? JSON.stringify(schema) : "no-schema"}`;
+  const existingRequest = inFlightRequests.get(requestKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
   
   const config: any = {
     responseMimeType: "application/json"
@@ -62,14 +73,24 @@ export const generateContentJSON = async (prompt: string, schema?: any): Promise
     config.responseSchema = schema;
   }
 
-  const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-    model: MODEL_NAME,
-    contents: [{ parts: [{ text: prompt }] }],
-    config
-  }));
+  const request = withRetry(async () => {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [{ parts: [{ text: prompt }] }],
+      config
+    });
 
-  const text = response.text;
-  if (!text) throw new Error("Empty response from AI");
-  
-  return JSON.parse(cleanJson(text));
+    const text = response.text;
+    if (!text) throw new Error("Empty response from AI");
+
+    return JSON.parse(cleanJson(text));
+  });
+
+  inFlightRequests.set(requestKey, request);
+
+  try {
+    return await request;
+  } finally {
+    inFlightRequests.delete(requestKey);
+  }
 };
